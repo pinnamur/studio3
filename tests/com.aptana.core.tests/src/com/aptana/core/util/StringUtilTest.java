@@ -7,6 +7,7 @@
  */
 package com.aptana.core.util;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,4 +152,32 @@ public class StringUtilTest extends TestCase
 
 		assertSame(text, StringUtil.getStringValue(item));
 	}
+	
+	public void testSplitInLines() throws Exception 
+	{
+	    assertEquals(Arrays.asList("a", "b", ""), StringUtil.splitInLines("a\nb\n"));
+	    assertEquals(Arrays.asList("a", "b"), StringUtil.splitInLines("a\nb"));
+	    assertEquals(Arrays.asList("a", "b"), StringUtil.splitInLines("a\r\nb"));
+	    assertEquals(Arrays.asList("a"), StringUtil.splitInLines("a"));
+	    assertEquals(Arrays.asList(), StringUtil.splitInLines(""));
+	    assertEquals(Arrays.asList("a", ""), StringUtil.splitInLines("a\r\n"));
+	    assertEquals(Arrays.asList("", ""), StringUtil.splitInLines("\r"));
+    }
+	
+	public void testSplitInLines2() throws Exception 
+	{
+	    checkJoinMatchesInput("");
+	    checkJoinMatchesInput("a");
+	    checkJoinMatchesInput("\n");
+	    checkJoinMatchesInput("a\n");
+	    checkJoinMatchesInput("\na");
+	    checkJoinMatchesInput("\na\n");
+	    checkJoinMatchesInput("\na\nb");
+	    checkJoinMatchesInput("\na\nb\n");
+	}
+	
+    private void checkJoinMatchesInput(String text) 
+    {
+        assertEquals(text, StringUtil.join("\n", StringUtil.splitInLines(text)));
+    }
 }

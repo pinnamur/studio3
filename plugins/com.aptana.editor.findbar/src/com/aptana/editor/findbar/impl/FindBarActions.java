@@ -36,6 +36,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.ToolItem;
+import org.eclipse.ui.IWorkbenchCommandConstants;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextActivation;
@@ -121,8 +122,21 @@ public class FindBarActions
 
 		// Now, aside from the find bar commands, there are some other commands that it's nice to have available too,
 		// even if the editor does not have focus.
-		fCommandToHandler.put("org.eclipse.ui.edit.undo", null); //$NON-NLS-1$
-		fCommandToHandler.put("org.eclipse.ui.edit.redo", null); //$NON-NLS-1$
+		fCommandToHandler.put(IWorkbenchCommandConstants.EDIT_UNDO, null);
+		fCommandToHandler.put(IWorkbenchCommandConstants.EDIT_REDO, null);
+		fCommandToHandler.put(IWorkbenchCommandConstants.WINDOW_SHOW_KEY_ASSIST, null);
+		
+		fCommandToHandler.put(IWorkbenchCommandConstants.WINDOW_NEXT_EDITOR, null);
+		fCommandToHandler.put(IWorkbenchCommandConstants.WINDOW_PREVIOUS_EDITOR, null);
+		
+		fCommandToHandler.put(IWorkbenchCommandConstants.WINDOW_NEXT_VIEW, null);
+		fCommandToHandler.put(IWorkbenchCommandConstants.WINDOW_PREVIOUS_VIEW, null);
+		
+		fCommandToHandler.put(IWorkbenchCommandConstants.WINDOW_NEXT_PERSPECTIVE, null);
+		fCommandToHandler.put(IWorkbenchCommandConstants.WINDOW_PREVIOUS_PERSPECTIVE, null);
+		
+		// Note that the paste is redirected when the combos gain focus
+		fCommandToHandler.put(IWorkbenchCommandConstants.EDIT_PASTE, null);
 	}
 
 	/**

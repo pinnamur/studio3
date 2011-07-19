@@ -435,6 +435,7 @@ public abstract class StringUtil
 		return s1.compareToIgnoreCase(s2);
 	}
 
+	
 	/**
 	 * Truncates the string to a particular length if it's longer and appends ... in the end.
 	 * 
@@ -452,4 +453,55 @@ public abstract class StringUtil
 		}
 		return new String(ellipsify(text.substring(0, length)));
 	}
+
+	
+    /**
+     * Splits the given string in a list where each element is a line.
+     * 
+     * It's implemented so that StringUtil.join("\n", StringUtil.splitInLines(text)) gives the same result string 
+     * (if text only contains '\n' new lines chars).
+     * 
+     * Some corner cases: 
+     *     If a string with single '\n' is received, the resulting array will have 2 empty strings.
+     *     If an empty string is received, an empty array is returned.
+     * 
+     * @param string string to be split.
+     * @return list of strings where each string is a line.
+     */
+    public static List<String> splitInLines(String string) {
+        ArrayList<String> ret = new ArrayList<String>();
+        int len = string.length();
+        if(len == 0){
+            return ret;
+        }
+
+        char c;
+        StringBuilder buf = new StringBuilder();
+
+        for (int i = 0; i < len; i++) 
+        {
+            c = string.charAt(i);
+
+            if (c == '\r') 
+            {
+                if (i < len - 1 && string.charAt(i + 1) == '\n') 
+                {
+                    i++;
+                }
+                ret.add(buf.toString());
+                buf.setLength(0);
+                continue;
+            }
+            if (c == '\n') 
+            {
+                ret.add(buf.toString());
+                buf.setLength(0);
+                continue;
+            }
+            buf.append(c);
+        }
+        ret.add(buf.toString());
+        return ret;
+    }
+    
 }

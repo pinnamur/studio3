@@ -271,11 +271,11 @@ public class FindBarDecorator implements IFindBarDecorator, SelectionListener
 		close.setToolTipText(Messages.FindBarDecorator_TOOLTIP_HideFindBar);
 
 		findButton = createButton(null, true);
-		findButton.setText(Messages.FindBarDecorator_LABEL_FInd);
+		findButton.setText(Messages.FindBarDecorator_LABEL_Find);
 
-		combo = createCombo(PREFERENCE_NAME_FIND);
-
-		comboReplace = createCombo(PREFERENCE_NAME_REPLACE);
+		combo = createCombo(PREFERENCE_NAME_FIND, true);
+		
+		comboReplace = createCombo(PREFERENCE_NAME_REPLACE, false);
 
 		ToolBar optionsToolBar = new ToolBar(findBar, SWT.NONE);
 		optionsToolBar.setLayoutData(createdDefaultGridData(SWT.LEFT, SWT.CENTER, false, false));
@@ -414,9 +414,11 @@ public class FindBarDecorator implements IFindBarDecorator, SelectionListener
 	/**
 	 * Creates a combo (find, replace).
 	 */
-	private Combo createCombo(String preferenceName)
+	private Combo createCombo(String preferenceName, boolean onPasteQuoteForFind)
 	{
-		final Combo combo = new Combo(findBar, SWT.DROP_DOWN);
+		final Combo combo = new ComboWithMultiLinePasteSupport(
+		        findBar, SWT.DROP_DOWN, onPasteQuoteForFind, textEditor);
+		
 		combo.setText("                            "); //$NON-NLS-1$
 		GridData comboGridData = createdDefaultGridData(SWT.FILL, SWT.CENTER, true, false);
 		Point size = combo.computeSize(SWT.DEFAULT, SWT.DEFAULT);
@@ -832,8 +834,16 @@ public class FindBarDecorator implements IFindBarDecorator, SelectionListener
 			{
 				ITextSelection textSelection = (ITextSelection) selection;
 				String text = textSelection.getText();
-				if (text.indexOf("\n") == -1 && text.indexOf("\r") == -1 && text.length() > 0) { //$NON-NLS-1$ //$NON-NLS-2$
-					setFindText(text);
+				if(text.length() > 0)
+				{
+    				if (text.indexOf('\n') == -1 && text.indexOf('\r') == -1) //$NON-NLS-1$ //$NON-NLS-2$
+				    {
+    					setFindText(text);
+    				}
+    				else
+    				{
+    				    setFindText(ComboWithMultiLinePasteSupport.quote(text, true)); 
+    				}
 				}
 			}
 		}
