@@ -81,7 +81,7 @@ public class V8DebugHost extends AbstractDebugHost {
 	};
 
 	private static final int V8_CONNECT_TIMEOUT = 300000;
-	private static final Pattern SCOPE_CHAIN_PATTERN = Pattern.compile("^<[A-Z]+>\\.(.*)$"); //$NON-NLS-1$ //$NON-NLS-2$
+	private static final Pattern SCOPE_CHAIN_PATTERN = Pattern.compile("^<[A-Z]+>\\.(.*)$"); //$NON-NLS-1$
 	private static final Pattern DETAIL_EXPRESSION_PATTERN = Pattern.compile("\\bthis\\b"); //$NON-NLS-1$
 	private static final String THIS_SUBSTITUTE = "__this__"; //$NON-NLS-1$
 	private static final String ANONYMOUS = "(anonymous function)"; //$NON-NLS-1$
@@ -206,15 +206,14 @@ public class V8DebugHost extends AbstractDebugHost {
 	protected void startDebugging() throws IOException {
 		currentFrames = currentContext.getCallFrames();
 		if (currentFrames == null || currentFrames.isEmpty()) {
-			logError("startDebugging(frames is empty)"); //$NON-NLS-1$
-			continueVm(StepAction.IN, 1);
+			handleSuspend();
 			return;
 		}
 		CallFrame frame = currentFrames.get(0);
 		Script script = frame.getScript();
 		// Filter internal API frames
 		if (currentContext.getState() == State.NORMAL && isScriptFiltered(script)) {
-			continueVm(StepAction.OUT, 1);
+			continueVm(SUSPEND.equals(suspendReason) ? StepAction.IN : (currentFrames.size() > 1 ? StepAction.OUT : StepAction.CONTINUE), 1);
 			return;
 		}
 		List<CallFrame> filteredFrames = new ArrayList<CallFrame>();
@@ -258,7 +257,9 @@ public class V8DebugHost extends AbstractDebugHost {
 			} else if (STEP_OVER.equals(resumeReason)) {
 				continueVm(StepAction.OVER, 1);
 			} else if (STEP_RETURN.equals(resumeReason)) {
-				continueVm(StepAction.OUT, 1);
+				int count = targetFrameCount;
+				targetFrameCount = 1;
+				continueVm(StepAction.OUT, count);
 			} else if (!ABORT.equals(reason)) {
 				continueVm(StepAction.CONTINUE, 0);
 			}
@@ -323,7 +324,9 @@ public class V8DebugHost extends AbstractDebugHost {
 	}
 	
 	protected void evaluateInGlobalContext(String expression) {
-		currentContext.getGlobalEvaluateContext().evaluateSync(expression, null, new Callback());
+		if (currentContext != null) {
+			currentContext.getGlobalEvaluateContext().evaluateSync(expression, null, new Callback());
+		}
 	}
 
 	private boolean suspendOnException(ExceptionData exceptionData) {
@@ -359,6 +362,10 @@ public class V8DebugHost extends AbstractDebugHost {
 			return true;
 		}
 		return false;
+	}
+	
+	protected void handleSuspend() {
+		continueVm(StepAction.CONTINUE, 0);
 	}
 
 	/* (non-Javadoc)
