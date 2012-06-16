@@ -261,17 +261,47 @@ public class ParserPoolFactory
 				return null;
 			}
 
+			boolean traceEnabled = IdeLog.isTraceEnabled(ParsingPlugin.getDefault(), IDebugScopes.PARSING);
+
 			int sourceHash = parseState.getSource().hashCode();
 			String key = MessageFormat.format("{0}:{1}", contentTypeId, sourceHash); //$NON-NLS-1$
 			IParseState cached = fParseCache.get(key);
 			if (cached != null && !cached.requiresReparse(parseState))
 			{
+				if (traceEnabled)
+				{
+					IdeLog.logTrace(
+							ParsingPlugin.getDefault(),
+							MessageFormat
+.format("Parsing cache hit for key ''{0}''.", key), IDebugScopes.PARSING);//$NON-NLS-1$
+				}
+
 				// copy over errors from old parse state to new one since we're not re-parsing
 				for (IParseError error : cached.getErrors())
 				{
 					parseState.addError(error);
 				}
 				return cached.getParseResult();
+			}
+			else if (cached != null && cached.requiresReparse(parseState))
+			{
+				if (traceEnabled)
+				{
+					IdeLog.logTrace(
+							ParsingPlugin.getDefault(),
+							MessageFormat.format(
+"Parsing cache hit for key ''{0}'', but required reparse.", key), IDebugScopes.PARSING);//$NON-NLS-1$
+				}
+			}
+			else
+			{
+				if (traceEnabled)
+				{
+					IdeLog.logTrace(
+							ParsingPlugin.getDefault(),
+							MessageFormat.format(
+"Parsing cache miss for key ''{0}''.", key), IDebugScopes.PARSING);//$NON-NLS-1$
+				}
 			}
 
 			IParserPool pool = getParserPool(contentTypeId);
@@ -283,6 +313,14 @@ public class ParserPoolFactory
 				{
 					try
 					{
+						if (traceEnabled)
+						{
+							IdeLog.logTrace(
+									ParsingPlugin.getDefault(),
+									MessageFormat.format(
+"Parsing file. Caching key ''{0}''.", key), IDebugScopes.PARSING);//$NON-NLS-1$
+						}
+
 						IParseRootNode ast = parser.parse(parseState);
 						parseState.setParseResult(ast);
 						fParseCache.put(key, parseState);
