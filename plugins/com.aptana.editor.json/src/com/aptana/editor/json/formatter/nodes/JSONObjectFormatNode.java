@@ -7,10 +7,10 @@
  */
 package com.aptana.editor.json.formatter.nodes;
 
-import com.aptana.editor.json.parsing.ast.JSONArrayNode;
-import com.aptana.editor.json.parsing.ast.JSONObjectNode;
 import com.aptana.formatter.IFormatterDocument;
 import com.aptana.formatter.nodes.FormatterBlockWithBeginEndNode;
+import com.aptana.json.core.parsing.ast.JSONArrayNode;
+import com.aptana.json.core.parsing.ast.JSONObjectNode;
 import com.aptana.parsing.ast.IParseNode;
 
 /**

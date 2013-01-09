@@ -10,8 +10,8 @@ package com.aptana.editor.json.outline;
 import junit.framework.TestCase;
 
 import com.aptana.editor.json.JSONPlugin;
-import com.aptana.editor.json.parsing.JSONParser;
 import com.aptana.editor.json.parsing.JSONScanner;
+import com.aptana.json.core.parsing.JSONParser;
 
 public class JSONOutlineProviderTest extends TestCase
 {

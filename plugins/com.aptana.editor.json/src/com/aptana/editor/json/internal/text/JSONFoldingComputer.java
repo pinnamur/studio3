@@ -6,9 +6,9 @@ import org.eclipse.jface.text.IDocument;
 import com.aptana.editor.common.AbstractThemeableEditor;
 import com.aptana.editor.common.text.AbstractFoldingComputer;
 import com.aptana.editor.json.JSONPlugin;
-import com.aptana.editor.json.parsing.ast.JSONArrayNode;
-import com.aptana.editor.json.parsing.ast.JSONObjectNode;
 import com.aptana.editor.json.preferences.IPreferenceConstants;
+import com.aptana.json.core.parsing.ast.JSONArrayNode;
+import com.aptana.json.core.parsing.ast.JSONObjectNode;
 import com.aptana.parsing.ast.IParseNode;
 
 public class JSONFoldingComputer extends AbstractFoldingComputer

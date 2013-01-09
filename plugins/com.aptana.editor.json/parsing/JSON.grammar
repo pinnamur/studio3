@@ -1,5 +1,5 @@
 // java -jar beaver.js -T -w JSON.beaver
-%package "com.aptana.editor.json.parsing";
+%package "com.aptana.json.core.parsing";
 
 %class "JSONParser";
 
@@ -58,7 +58,7 @@
      */
     protected synchronized void parse(IParseState parseState, WorkingParseResult working) throws java.lang.Exception
     {
-       	JSONScanner scanner = new JSONScanner();
+       	JSONFlexScanner scanner = new JSONFlexScanner();
 
 		// send source to the scanner
 		scanner.setSource(parseState.getSource());
@@ -75,13 +75,13 @@
         report = new JSONEvents();
 :};
 
-%terminals PROPERTY, STRING_DOUBLE, STRING_SINGLE;
+%terminals STRING;
 %terminals LCURLY, RCURLY, LBRACKET, RBRACKET;
 %terminals COMMA, COLON;
 %terminals NUMBER, TRUE, FALSE, NULL;
 
 %typeof Entry, Value, String = "JSONNode";
-%typeof PROPERTY, STRING_SINGLE, STRING_DOUBLE, NUMBER = "String";
+%typeof STRING, NUMBER = "String";
 
 %goal JSON;
 
@@ -119,11 +119,7 @@ Value
     ;
 
 String
-    =   STRING_DOUBLE.s
-    	{:
-    		return new JSONStringNode(s.substring(1, s.length() - 1));
-    	:}
-    |   STRING_SINGLE.s
+    =   STRING.s
     	{:
     		return new JSONStringNode(s.substring(1, s.length() - 1));
     	:}
@@ -153,7 +149,7 @@ Entries
     ;
 
 Entry
-    =   PROPERTY.p COLON.c Value.v
+    =   STRING.p COLON.c Value.v
         {:
             JSONEntryNode entry = new JSONEntryNode(c);
             JSONStringNode property = new JSONStringNode(p.substring(1, p.length() - 1));

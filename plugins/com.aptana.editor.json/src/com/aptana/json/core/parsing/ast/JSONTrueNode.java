@@ -5,23 +5,19 @@
  * Please see the license.html included with this distribution for details.
  * Any modifications to this file must keep this entire header intact.
  */
-package com.aptana.editor.json.parsing.ast;
+package com.aptana.json.core.parsing.ast;
 
 /**
- * JSONNumberNode
+ * JSONTrueNode
  */
-public class JSONNumberNode extends JSONNode
+public class JSONTrueNode extends JSONNode
 {
-	private String _text;
-
 	/**
-	 * JSONNumberNode
+	 * JSONTrueNode
 	 */
-	public JSONNumberNode(String text)
+	public JSONTrueNode()
 	{
-		super(JSONNodeType.NUMBER);
-
-		this._text = text;
+		super(JSONNodeType.TRUE);
 	}
 
 	/*
@@ -40,6 +36,6 @@ public class JSONNumberNode extends JSONNode
 	 */
 	public String getText()
 	{
-		return this._text;
+		return "true"; //$NON-NLS-1$
 	}
 }

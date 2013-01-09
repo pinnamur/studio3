@@ -5,19 +5,25 @@
  * Please see the license.html included with this distribution for details.
  * Any modifications to this file must keep this entire header intact.
  */
-package com.aptana.editor.json.parsing.ast;
+package com.aptana.json.core.parsing.ast;
+
+import beaver.Symbol;
 
 /**
- * JSONTrueNode
+ * JSONEntryNode
  */
-public class JSONTrueNode extends JSONNode
+public class JSONEntryNode extends JSONNode
 {
+	private Symbol _colon;
+
 	/**
-	 * JSONTrueNode
+	 * JSONEntryNode
 	 */
-	public JSONTrueNode()
+	public JSONEntryNode(Symbol colon)
 	{
-		super(JSONNodeType.TRUE);
+		super(JSONNodeType.ENTRY);
+
+		this._colon = colon;
 	}
 
 	/*
@@ -30,12 +36,13 @@ public class JSONTrueNode extends JSONNode
 		walker.visit(this);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see com.aptana.parsing.ast.ParseNode#getText()
+	/**
+	 * getColon
+	 * 
+	 * @return
 	 */
-	public String getText()
+	public Symbol getColon()
 	{
-		return "true"; //$NON-NLS-1$
+		return this._colon;
 	}
 }

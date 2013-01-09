@@ -29,7 +29,7 @@
    <extension
          point="com.aptana.parsing.parser">
       <parser
-            class="com.aptana.editor.json.parsing.JSONParser"
+            class="com.aptana.json.core.parsing.JSONParser"
             content-type="com.aptana.contenttype.json">
       </parser>
    </extension>

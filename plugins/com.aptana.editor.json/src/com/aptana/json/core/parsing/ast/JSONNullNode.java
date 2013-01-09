@@ -5,19 +5,19 @@
  * Please see the license.html included with this distribution for details.
  * Any modifications to this file must keep this entire header intact.
  */
-package com.aptana.editor.json.parsing.ast;
+package com.aptana.json.core.parsing.ast;
 
 /**
- * JSONArrayNode
+ * JSONNullNode
  */
-public class JSONArrayNode extends JSONNode
+public class JSONNullNode extends JSONNode
 {
 	/**
-	 * JSONArrayNode
+	 * JSONNullNode
 	 */
-	public JSONArrayNode()
+	public JSONNullNode()
 	{
-		super(JSONNodeType.ARRAY);
+		super(JSONNodeType.NULL);
 	}
 
 	/*
@@ -36,6 +36,6 @@ public class JSONArrayNode extends JSONNode
 	 */
 	public String getText()
 	{
-		return "<Array>"; //$NON-NLS-1$
+		return "null"; //$NON-NLS-1$
 	}
 }

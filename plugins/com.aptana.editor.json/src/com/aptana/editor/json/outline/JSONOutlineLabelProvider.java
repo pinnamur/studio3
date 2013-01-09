@@ -12,8 +12,8 @@ import org.eclipse.swt.graphics.Image;
 
 import com.aptana.editor.common.outline.CommonOutlineItem;
 import com.aptana.editor.json.JSONPlugin;
-import com.aptana.editor.json.parsing.ast.JSONEntryNode;
-import com.aptana.editor.json.parsing.ast.JSONNode;
+import com.aptana.json.core.parsing.ast.JSONEntryNode;
+import com.aptana.json.core.parsing.ast.JSONNode;
 import com.aptana.parsing.ast.IParseNode;
 
 /**
