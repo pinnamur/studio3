@@ -263,7 +263,7 @@ public class SQL_Results extends SQL
 					"ORDER BY DATAPOINT.ID, DATAPOINT.STEP"; //$NON-NLS-1$
 			this.queryScenarioDataPoints = this.fConnection.prepareStatement(statement);
 		}
-		this.queryScenarioDataPoints.setString(1, "%" + "hudson-ubuntu32" + "%"); //$NON-NLS-1$ //$NON-NLS-2$
+		this.queryScenarioDataPoints.setString(1, "%" + "hudson-ubuntu" + "%"); //$NON-NLS-1$ //$NON-NLS-2$
 		this.queryScenarioDataPoints.setInt(2, scenarioID);
 		ResultSet resultSet = this.queryScenarioDataPoints.executeQuery();
 		if (DB_Results.DEBUG)
@@ -328,7 +328,7 @@ public class SQL_Results extends SQL
 							"(DIM_ID = " + InternalDimensions.ELAPSED_PROCESS.getId() + " or DIM_ID = 0)" + //$NON-NLS-1$ //$NON-NLS-2$
 							" order by VARIATION_ID, DIM_ID"); //$NON-NLS-1$
 		}
-		this.queryScenarioSummaries.setString(1, "|build=" + buildPattern + "||config=" + config + "||jvm=sun|"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		this.queryScenarioSummaries.setString(1, "|build=" + buildPattern + "||host=" + config + "||jvm=1.6.0_20|"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		this.queryScenarioSummaries.setInt(2, scenarioID);
 		return this.queryScenarioSummaries.executeQuery();
 	}

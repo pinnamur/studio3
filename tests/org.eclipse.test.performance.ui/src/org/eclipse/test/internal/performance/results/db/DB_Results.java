@@ -40,7 +40,7 @@ import org.eclipse.test.performance.Dimension;
 public class DB_Results
 {
 
-	private static final String DEFAULT_DB_BASELINE_PREFIX = "R-";
+	private static final String DEFAULT_DB_BASELINE_PREFIX = "3.3.";
 	private static final Dim[] NO_DIMENSION = new Dim[0];
 	private static final String[] EMPTY_LIST = new String[0];
 	static final boolean DEBUG = false;
