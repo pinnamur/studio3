@@ -317,6 +317,7 @@ public class EclipseUtil
 	 */
 	public static boolean isTesting()
 	{
+
 		if (isTesting != null)
 		{
 			return isTesting;
