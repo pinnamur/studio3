@@ -36,6 +36,7 @@ public class PingStartup implements IStartup
 
 	private static final String STUDIO_FIRST_RUN = "studio.first-run"; //$NON-NLS-1$
 	private static final String STUDIO_ENROLL = "ti.enroll"; //$NON-NLS-1$
+	private static final String STUDIO_START = "ti.start"; //$NON-NLS-1$
 
 	private static final Map<String, String> STUDIO_NATURE_MAP;
 	static
@@ -133,6 +134,11 @@ public class PingStartup implements IStartup
 			{
 				UsagePlugin.logError(e);
 			}
+		}
+
+		if (!EclipseUtil.isTesting())
+		{
+			StudioAnalytics.getInstance().sendEvent(new AnalyticsEvent(STUDIO_START, STUDIO_START, null));
 		}
 
 		// Hook up ping when we delete a project

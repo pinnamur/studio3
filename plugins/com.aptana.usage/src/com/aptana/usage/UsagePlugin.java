@@ -47,12 +47,6 @@ public class UsagePlugin extends Plugin
 	{
 		super.start(context);
 		plugin = this;
-
-		// Send ping when we start studio
-		if (!EclipseUtil.isTesting())
-		{
-			StudioAnalytics.getInstance().sendEvent(new AnalyticsEvent(STUDIO_START, STUDIO_START, null));
-		}
 	}
 
 	/*
