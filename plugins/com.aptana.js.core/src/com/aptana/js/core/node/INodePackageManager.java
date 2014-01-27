@@ -93,7 +93,17 @@ public interface INodePackageManager
 
 	public String getInstalledVersion(String packageName, boolean isGlobal, IPath workingDir) throws CoreException;
 
-	public String getLatestVersionAvailable(String packageName) throws CoreException;
+	/**
+	 * Returns the latest version available for the specified npm package.
+	 * 
+	 * @param packageName
+	 * @param published
+	 *            - If true, it searches for the published latest version, otherwise it looks for the highest version
+	 *            available.
+	 * @return
+	 * @throws CoreException
+	 */
+	public String getLatestVersionAvailable(String packageName, boolean published) throws CoreException;
 
 	public String getConfigValue(String key) throws CoreException;
 

@@ -46,6 +46,7 @@ import com.aptana.core.util.PlatformUtil;
 import com.aptana.core.util.ProcessStatus;
 import com.aptana.core.util.ProcessUtil;
 import com.aptana.core.util.StringUtil;
+import com.aptana.core.util.VersionUtil;
 import com.aptana.js.core.JSCorePlugin;
 import com.aptana.js.core.node.INodeJS;
 import com.aptana.js.core.node.INodePackageManager;
@@ -473,14 +474,47 @@ public class NodePackageManager implements INodePackageManager
 		return null;
 	}
 
-	public String getLatestVersionAvailable(String packageName) throws CoreException
+	public String getLatestVersionAvailable(String packageName, boolean published) throws CoreException
 	{
 		// get the latest version
 		// npm view titanium version
+		String publishedVersion = StringUtil.EMPTY;
+		String message = viewNpmInfo(packageName, "version");
+		Matcher m = VERSION_PATTERN.matcher(message);
+		if (m.find())
+		{
+			publishedVersion = m.group(1);
+		}
+		if (!published)
+		{
+			try
+			{
+				message = viewNpmInfo(packageName, "versions");
+				// JSONArray versions = (JSONArray) new JSONParser().parse(message);
+				// String highestVersion = (String) versions.get(versions.size() - 1);
+				String highestVersion = "3.2.1-beta3";
+
+				// Make sure the highest version is always greater than published version.
+				if (VersionUtil.compareVersions(highestVersion, publishedVersion, true, true) > 0)
+				{
+					return highestVersion;
+				}
+
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		return publishedVersion;
+	}
+
+	private String viewNpmInfo(String packageName, String command) throws CoreException
+	{
 		IPath npmPath = checkedNPMPath();
 
 		Map<String, String> env = ShellExecutable.getEnvironment();
-		List<String> args = CollectionsUtil.newList(npmPath.toOSString(), "view", packageName, "version");//$NON-NLS-1$ //$NON-NLS-2$
+		List<String> args = CollectionsUtil.newList(npmPath.toOSString(), "view", packageName, command);//$NON-NLS-1$ //$NON-NLS-2$
 		args.addAll(proxySettings(env));
 
 		IStatus status = nodeJS.runInBackground(null, env, args);
@@ -489,13 +523,7 @@ public class NodePackageManager implements INodePackageManager
 			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
 					Messages.NodePackageManager_FailedToDetermineLatestVersion, packageName)));
 		}
-		String message = status.getMessage().trim();
-		Matcher m = VERSION_PATTERN.matcher(message);
-		if (m.find())
-		{
-			return m.group(1);
-		}
-		return null;
+		return status.getMessage().trim();
 	}
 
 	public String getConfigValue(String key) throws CoreException
