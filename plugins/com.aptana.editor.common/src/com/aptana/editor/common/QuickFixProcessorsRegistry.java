@@ -12,6 +12,7 @@ import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
+import org.eclipse.core.runtime.IExtensionPoint;
 import org.eclipse.jface.text.quickassist.IQuickAssistProcessor;
 
 import com.aptana.core.IMap;
@@ -45,29 +46,34 @@ public class QuickFixProcessorsRegistry
 		return null;
 	}
 
+	protected IExtensionPoint getExtensionPoint()
+	{
+		return EclipseUtil.getExtensionPoint(CommonEditorPlugin.PLUGIN_ID, EXTENSION_POINT_ID);
+	}
+
 	private synchronized void lazyLoad()
 	{
 		if (processorsMap == null)
 		{
 			IdeLog.logInfo(CommonEditorPlugin.getDefault(), "lazyload");
 			final ArrayList<LazyQuickFixProcessor> temp = new ArrayList<LazyQuickFixProcessor>();
-			EclipseUtil.processConfigurationElements(CommonEditorPlugin.PLUGIN_ID, EXTENSION_POINT_ID,
-					new IConfigurationElementProcessor()
+			IExtensionPoint extensionPoint = getExtensionPoint();
+			EclipseUtil.doProcessElements(extensionPoint, new IConfigurationElementProcessor()
+			{
+				public void processElement(IConfigurationElement element)
+				{
+					String elementName = element.getName();
+					if (ELEMENT_TYPE.equals(elementName))
 					{
-						public void processElement(IConfigurationElement element)
-						{
-							String elementName = element.getName();
-							if (ELEMENT_TYPE.equals(elementName))
-							{
-								temp.add(new LazyQuickFixProcessor(element));
-							}
-						}
+						temp.add(new LazyQuickFixProcessor(element));
+					}
+				}
 
-						public Set<String> getSupportElementNames()
-						{
-							return CollectionsUtil.newSet(ELEMENT_TYPE);
-						}
-					});
+				public Set<String> getSupportElementNames()
+				{
+					return CollectionsUtil.newSet(ELEMENT_TYPE);
+				}
+			});
 			temp.trimToSize();
 
 			processorsMap = CollectionsUtil.mapFromValues(temp, new IMap<LazyQuickFixProcessor, String>()
