@@ -172,7 +172,9 @@ public class FileReader extends FileTransferJob implements IFileTransferListener
 		{
 			// we no longer need the cancel handler because we are about to fork the transfer job
 			if (cancelJob != null)
+			{
 				cancelJob.cancel();
+			}
 			IIncomingFileTransfer source = ((IIncomingFileTransferEvent) event).getSource();
 			try
 			{
@@ -243,12 +245,15 @@ public class FileReader extends FileTransferJob implements IFileTransferListener
 		else if (event instanceof IIncomingFileTransferReceivePausedEvent)
 		{
 			this.hasPaused = true;
+			onPause(event);
 		}
 		else if (event instanceof IIncomingFileTransferReceiveResumedEvent)
 		{
 			// we no longer need the cancel handler because we are about to resume the transfer job
 			if (cancelJob != null)
+			{
 				cancelJob.cancel();
+			}
 			try
 			{
 				((IIncomingFileTransferReceiveResumedEvent) event).receive(theOutputStream, this);
@@ -260,6 +265,7 @@ public class FileReader extends FileTransferJob implements IFileTransferListener
 			finally
 			{
 				this.hasPaused = false;
+				onResume(event);
 			}
 		}
 	}
@@ -270,13 +276,14 @@ public class FileReader extends FileTransferJob implements IFileTransferListener
 		{
 			pausable = (IFileTransferPausable) source.getAdapter(IFileTransferPausable.class);
 			if (pausable != null)
+			{
 				pausable.pause();
+			}
 		}
 	}
 
 	protected void completeTransfer(IFileTransferEvent event)
 	{
-		System.err.println("recieved COMPLETE event");
 		if (closeStreamWhenFinished)
 		{
 			hardClose(theOutputStream);
@@ -471,7 +478,9 @@ public class FileReader extends FileTransferJob implements IFileTransferListener
 			{
 				Thread.sleep(1000);
 				if (monitor.isCanceled())
+				{
 					throw new OperationCanceledException();
+				}
 			}
 			Job.getJobManager().join(this, monitor);
 			waitPaused(uri, anOutputStream, startPos, monitor);
@@ -711,26 +720,50 @@ public class FileReader extends FileTransferJob implements IFileTransferListener
 	private void onDone(IIncomingFileTransfer source)
 	{
 		if (testProbe != null)
+		{
 			testProbe.onDone(this, source, theMonitor);
+		}
 	}
 
 	private void onStart(IIncomingFileTransfer source)
 	{
 		if (testProbe != null)
+		{
 			testProbe.onStart(this, source, theMonitor);
+		}
 	}
 
 	private void onData(IIncomingFileTransfer source)
 	{
 		if (testProbe != null)
+		{
 			testProbe.onData(this, source, theMonitor);
+		}
+	}
+
+	private void onResume(IFileTransferEvent event)
+	{
+		IIncomingFileTransfer source = ((IIncomingFileTransferEvent) event).getSource();
+		if (testProbe != null)
+		{
+			testProbe.onResume(this, source, theMonitor);
+		}
+	}
+
+	private void onPause(IFileTransferEvent event)
+	{
+		IIncomingFileTransfer source = ((IIncomingFileTransferEvent) event).getSource();
+		if (testProbe != null)
+		{
+			testProbe.onPause(this, source, theMonitor);
+		}
 	}
 
 	/**
 	 * Sets a testing probe that can intercept events on the file reader for testing purposes. This method should only
 	 * ever be called from automated test suites.
 	 */
-	public static void setTestProbe(IFileReaderProbe probe)
+	public void setTestProbe(IFileReaderProbe probe)
 	{
 		testProbe = probe;
 	}
@@ -766,6 +799,10 @@ public class FileReader extends FileTransferJob implements IFileTransferListener
 	public interface IFileReaderProbe
 	{
 		public void onStart(FileReader reader, IIncomingFileTransfer source, IProgressMonitor monitor);
+
+		public void onPause(FileReader fileReader, IIncomingFileTransfer source, IProgressMonitor theMonitor);
+
+		public void onResume(FileReader fileReader, IIncomingFileTransfer source, IProgressMonitor theMonitor);
 
 		public void onData(FileReader reader, IIncomingFileTransfer source, IProgressMonitor monitor);
 

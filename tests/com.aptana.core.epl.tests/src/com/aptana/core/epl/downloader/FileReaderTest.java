@@ -1,6 +1,7 @@
 package com.aptana.core.epl.downloader;
 
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.net.ProtocolException;
 import java.net.URI;
@@ -23,6 +24,8 @@ import org.jmock.lib.legacy.ClassImposteriser;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.aptana.core.util.FileUtil;
 
 public class FileReaderTest
 {
@@ -54,7 +57,7 @@ public class FileReaderTest
 		out = context.mock(OutputStream.class);
 		uri = URI.create("http://example.com/index.html");
 		jobManager = context.mock(IJobManager.class);
-		reader = new FileReader(cc)
+		reader = new FileReader(null, cc)
 		{
 			@Override
 			protected IRetrieveFileTransferFactory getRetrieveFileTransferFactory()
