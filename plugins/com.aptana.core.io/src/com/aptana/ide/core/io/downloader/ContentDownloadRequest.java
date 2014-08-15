@@ -24,6 +24,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.ecf.core.security.IConnectContext;
 import org.eclipse.osgi.util.NLS;
 
+import com.aptana.core.epl.downloader.ConnectionData;
 import com.aptana.core.epl.downloader.FileReader;
 import com.aptana.core.util.FileUtil;
 import com.aptana.core.util.StringUtil;

@@ -40,7 +40,6 @@ public class DownloadManager
 {
 	private List<ContentDownloadRequest> downloads;
 	private List<IPath> completedDownloadsPaths;
-	private int retryCount = 1;
 	private ConnectionData connectData;
 
 	/**
