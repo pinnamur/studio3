@@ -11,6 +11,8 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -33,23 +35,26 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Plugin;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
-import org.eclipse.core.runtime.preferences.DefaultScope;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
-import org.eclipse.osgi.framework.internal.core.FrameworkProperties;
 import org.eclipse.osgi.service.datalocation.Location;
 import org.eclipse.osgi.service.debug.DebugOptions;
+import org.eclipse.osgi.service.environment.EnvironmentInfo;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.Version;
+import org.osgi.service.prefs.BackingStoreException;
 
 import com.aptana.core.CorePlugin;
 import com.aptana.core.ICorePreferenceConstants;
 import com.aptana.core.IDebugScopes;
 import com.aptana.core.logging.IdeLog;
 
-@SuppressWarnings("restriction")
 public class EclipseUtil
 {
+	private static final String DEV_VERSION = "0.0.0.qualifier";
+
 	/**
 	 * Default prefix for Studio
 	 */
@@ -59,6 +64,10 @@ public class EclipseUtil
 	 * Default product name
 	 */
 	private static final String APTANA_STUDIO = MessageFormat.format("{0} Studio", APTANA_STUDIO_PREFIX); //$NON-NLS-1$
+
+	private static final Pattern VERSION_PATTERN = Pattern.compile("Version: (.*)\n"); //$NON-NLS-1$
+	private static final Pattern VERSION_4_4_PATTERN = Pattern.compile("Version: \\{1\\} \\((.*)\\)\n"); //$NON-NLS-1$
+	private static final Pattern BUILD_PATTERN = Pattern.compile("build: (.*)\n"); //$NON-NLS-1$
 
 	protected static final class LauncherFilter implements FilenameFilter
 	{
@@ -105,6 +114,7 @@ public class EclipseUtil
 	private static String versionPluginId = "com.aptana.branding"; //$NON-NLS-1$
 
 	private static String fgPrefix;
+	private static Boolean fgNewAPI;
 
 	private EclipseUtil()
 	{
@@ -234,38 +244,48 @@ public class EclipseUtil
 	 */
 	public static String getProductVersion()
 	{
-		String version = null;
+
 		try
 		{
 			IProduct product = Platform.getProduct();
-			String aboutText = product.getProperty("aboutText"); //$NON-NLS-1$
-
-			String pattern = "Version: (.*)\n"; //$NON-NLS-1$
-			Pattern p = Pattern.compile(pattern);
-			Matcher m = p.matcher(aboutText);
-			boolean found = m.find();
-			if (!found)
+			if (product != null)
 			{
-				p = Pattern.compile("build: (.*)\n"); //$NON-NLS-1$
-				m = p.matcher(aboutText);
-				found = m.find();
-			}
+				String aboutText = product.getProperty("aboutText"); //$NON-NLS-1$
+				if (!StringUtil.isEmpty(aboutText))
+				{
+					Matcher m = VERSION_4_4_PATTERN.matcher(aboutText);
+					if (m.find())
+					{
+						return Version.parseVersion(m.group(1)).toString();
+					}
 
-			if (found)
-			{
-				version = m.group(1);
+					// Try version pattern from before 4.4
+					m = VERSION_PATTERN.matcher(aboutText);
+					if (m.find())
+					{
+						return m.group(1);
+					}
+
+					// fall back to trying to match build #
+					m = BUILD_PATTERN.matcher(aboutText);
+					if (m.find())
+					{
+						String version = m.group(1);
+						if (!DEV_VERSION.equals(version))
+						{
+							return version;
+						}
+					}
+				}
 			}
 		}
 		catch (Exception e)
 		{
-			// ignores
+			// ignore
 		}
-		if (StringUtil.isEmpty(version))
-		{
-			// falls back to the branding plugin version
-			return getStudioVersion();
-		}
-		return version;
+
+		// falls back to the branding plugin version
+		return getStudioVersion();
 	}
 
 	/**
@@ -440,14 +460,68 @@ public class EclipseUtil
 	 */
 	public static void setPlatformDebugging(boolean debugEnabled)
 	{
-		if (debugEnabled)
+		// Platform only sees a null value as "false" for this, so we need to hack around to set a null value
+		// depending on what API version we're using. 4.3 and lower throw exceptions if we try to set the property to
+		// null.
+		final String propertyName = "osgi.debug"; //$NON-NLS-1$
+		if (!debugEnabled && !isNewOSGIAPI())
 		{
-			FrameworkProperties.setProperty("osgi.debug", "true"); //$NON-NLS-1$ //$NON-NLS-2$
+			// Can't set a null property on EnivronmentInfo in 4.3 and lower. So we need to hack using reflection
+			// against old API
+			try
+			{
+				Class klazz = Class.forName("org.eclipse.osgi.framework.internal.core.FrameworkProperties"); //$NON-NLS-1$
+				Method m = klazz.getMethod("clearProperty", String.class); //$NON-NLS-1$
+				m.invoke(null, propertyName);
+				return;
+			}
+			catch (ClassNotFoundException cnfe)
+			{
+				// assume it's because we're on a 4.4+ build where we follow with the logic below...
+			}
+			catch (Exception e)
+			{
+				IdeLog.logError(CorePlugin.getDefault(), e);
+			}
 		}
-		else
+		BundleContext context = CorePlugin.getDefault().getContext();
+		if (context == null)
 		{
-			FrameworkProperties.clearProperty("osgi.debug"); //$NON-NLS-1$
+			return;
 		}
+		ServiceReference<EnvironmentInfo> ref = context.getServiceReference(EnvironmentInfo.class);
+		if (ref == null)
+		{
+			return;
+		}
+		EnvironmentInfo info = context.getService(ref);
+		if (info != null)
+		{
+			if (debugEnabled)
+			{
+				info.setProperty(propertyName, Boolean.toString(debugEnabled));
+			}
+			else
+			{
+				info.setProperty(propertyName, null);
+			}
+		}
+	}
+
+	/**
+	 * The 3.10.0 version of the OSGI bundle made a lot of breaking changes to internals (that we unfortunately used).
+	 * 
+	 * @return
+	 */
+	private synchronized static boolean isNewOSGIAPI()
+	{
+		if (fgNewAPI == null)
+		{
+			Bundle b = Platform.getBundle("org.eclipse.osgi"); //$NON-NLS-1$
+			Version v = b.getVersion();
+			fgNewAPI = v.compareTo(Version.parseVersion("3.9.100")) >= 0; //$NON-NLS-1$
+		}
+		return fgNewAPI;
 	}
 
 	/**
@@ -590,41 +664,60 @@ public class EclipseUtil
 	public static void processConfigurationElements(String pluginId, String extensionPointId,
 			IConfigurationElementProcessor processor)
 	{
-		if (!StringUtil.isEmpty(pluginId) && !StringUtil.isEmpty(extensionPointId) && processor != null
-				&& !processor.getSupportElementNames().isEmpty())
+		IExtensionPoint extensionPoint = getExtensionPoint(pluginId, extensionPointId);
+		if (extensionPoint != null)
 		{
-			IExtensionRegistry registry = Platform.getExtensionRegistry();
+			processElements(extensionPoint, processor);
+		}
+	}
 
-			if (registry != null)
+	public static IExtensionPoint getExtensionPoint(String pluginId, String extensionPointId)
+	{
+		if (StringUtil.isEmpty(pluginId) || StringUtil.isEmpty(extensionPointId))
+		{
+			return null;
+		}
+		IExtensionRegistry registry = Platform.getExtensionRegistry();
+
+		if (registry != null)
+		{
+			IdeLog.logInfo(CorePlugin.getDefault(), MessageFormat.format(
+					"Geting Extension Point for {0} and extensionPoint {1} from {2}", pluginId, extensionPointId,
+					registry), IDebugScopes.EXTENSION_POINTS);
+			return registry.getExtensionPoint(pluginId, extensionPointId);
+		}
+		return null;
+	}
+
+	public static void processElements(IExtensionPoint extensionPoint, IConfigurationElementProcessor processor)
+	{
+		if (processor == null || processor.getSupportElementNames().isEmpty())
+		{
+			return;
+		}
+
+		Set<String> elementNames = processor.getSupportElementNames();
+		IdeLog.logInfo(
+				CorePlugin.getDefault(),
+				MessageFormat.format("Extension point : {0} and elements : {1}", extensionPoint,
+						StringUtil.join(",", elementNames)), IDebugScopes.EXTENSION_POINTS);
+		IExtension[] extensions = extensionPoint.getExtensions();
+		for (String elementName : elementNames)
+		{
+			for (IExtension extension : extensions)
 			{
-				IExtensionPoint extensionPoint = registry.getExtensionPoint(pluginId, extensionPointId);
+				IConfigurationElement[] elements = extension.getConfigurationElements();
 
-				if (extensionPoint != null)
+				for (IConfigurationElement element : elements)
 				{
-					Set<String> elementNames = processor.getSupportElementNames();
-					IExtension[] extensions = extensionPoint.getExtensions();
-					for (String elementName : elementNames)
+					if (element.getName().equals(elementName))
 					{
-						for (IExtension extension : extensions)
+						processor.processElement(element);
+						if (IdeLog.isTraceEnabled(CorePlugin.getDefault(), IDebugScopes.EXTENSION_POINTS))
 						{
-							IConfigurationElement[] elements = extension.getConfigurationElements();
-
-							for (IConfigurationElement element : elements)
-							{
-								if (element.getName().equals(elementName))
-								{
-									processor.processElement(element);
-									if (IdeLog.isTraceEnabled(CorePlugin.getDefault(), IDebugScopes.EXTENSION_POINTS))
-									{
-										IdeLog.logTrace(
-												CorePlugin.getDefault(),
-												MessageFormat
-														.format("Processing extension element {0} with attributes {1}", element.getName(), //$NON-NLS-1$
-																collectElementAttributes(element)),
-												IDebugScopes.EXTENSION_POINTS);
-									}
-								}
-							}
+							IdeLog.logTrace(CorePlugin.getDefault(), MessageFormat.format(
+									"Processing extension element {0} with attributes {1}", element.getName(), //$NON-NLS-1$
+									collectElementAttributes(element)), IDebugScopes.EXTENSION_POINTS);
 						}
 					}
 				}
@@ -650,39 +743,67 @@ public class EclipseUtil
 	}
 
 	/**
-	 * Wrapper for Eclipse 3.6- to collect all deprecated usages into a single location. Once Eclipse 3.7 is the default
-	 * base platform, we can remove this call.
+	 * Use this to load resources from extension points. For relative paths this will convert to a URL referencing the
+	 * enclosing plugin and resolve the path. Otherwise this will convert the string to an URL (so a resource could be
+	 * pointed at in the plugin.xml definition using http:, ftp:, data:, platform:/plugin/plugin.id URLs)
 	 * 
+	 * @param element
+	 * @param attr
 	 * @return
 	 */
-	@SuppressWarnings("deprecation")
-	public static InstanceScope instanceScope()
+	public static URL getResourceURL(IConfigurationElement element, String attr)
 	{
-		return new InstanceScope();
+		String iconPath = element.getAttribute(attr);
+		if (iconPath == null)
+		{
+			return null;
+		}
+
+		// If iconPath doesn't specify a scheme, then try to transform to a URL
+		// RFC 3986: scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+		// This allows using data:, http:, or other custom URL schemes
+		if (!iconPath.matches("\\p{Alpha}[\\p{Alnum}+.-]*:.*")) { //$NON-NLS-1$
+			String extendingPluginId = element.getDeclaringExtension().getContributor().getName();
+			iconPath = "platform:/plugin/" + extendingPluginId + "/" + iconPath; //$NON-NLS-1$//$NON-NLS-2$
+		}
+		try
+		{
+			return new URL(iconPath);
+		}
+		catch (MalformedURLException e)
+		{
+			/* IGNORE */
+		}
+		return null;
 	}
 
 	/**
-	 * Wrapper for Eclipse 3.6- to collect all deprecated usages into a single location. Once Eclipse 3.7 is the default
-	 * base platform, we can remove this call.
-	 * 
-	 * @return
+	 * Migrate the existing preferences from instance scope to configuration scope and then remove the preference key
+	 * from the instance scope.
 	 */
-	@SuppressWarnings("deprecation")
-	public static DefaultScope defaultScope()
+	public static void migratePreference(String pluginId, String preferenceKey)
 	{
-		return new DefaultScope();
-	}
-
-	/**
-	 * Wrapper for Eclipse 3.6- to collect all deprecated usages into a single location. Once Eclipse 3.7 is the default
-	 * base platform, we can remove this call.
-	 * 
-	 * @return
-	 */
-	@SuppressWarnings("deprecation")
-	public static ConfigurationScope configurationScope()
-	{
-		return new ConfigurationScope();
+		IEclipsePreferences configNode = ConfigurationScope.INSTANCE.getNode(pluginId);
+		if (StringUtil.isEmpty(configNode.get(preferenceKey, null))) // no value in config scope
+		{
+			IEclipsePreferences instanceNode = InstanceScope.INSTANCE.getNode(pluginId);
+			String instancePrefValue = instanceNode.get(preferenceKey, null);
+			if (!StringUtil.isEmpty(instancePrefValue))
+			{
+				// only migrate if there is a value!
+				configNode.put(preferenceKey, instancePrefValue);
+				instanceNode.remove(preferenceKey);
+				try
+				{
+					configNode.flush();
+					instanceNode.flush();
+				}
+				catch (BackingStoreException e)
+				{
+					IdeLog.logWarning(CorePlugin.getDefault(), e.getMessage(), e);
+				}
+			}
+		}
 	}
 
 }

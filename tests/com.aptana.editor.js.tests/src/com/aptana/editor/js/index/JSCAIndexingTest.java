@@ -7,6 +7,11 @@
  */
 package com.aptana.editor.js.index;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,6 +27,8 @@ import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.contentassist.ICompletionProposalExtension2;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Shell;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.aptana.core.util.CollectionsUtil;
 import com.aptana.core.util.StringUtil;
@@ -32,6 +39,8 @@ import com.aptana.index.core.IndexManager;
 import com.aptana.index.core.IndexPlugin;
 import com.aptana.js.core.index.JSCAFileIndexingParticipant;
 import com.aptana.js.core.index.JSIndexQueryHelper;
+import com.aptana.js.core.model.FunctionElement;
+import com.aptana.js.core.model.ParameterElement;
 import com.aptana.js.core.model.PropertyElement;
 import com.aptana.js.core.model.TypeElement;
 import com.aptana.js.internal.core.index.JSIndexReader;
@@ -62,7 +71,7 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 			Collection<TypeElement> type = new JSIndexReader().getType(index, typeName, false);
 
 			assertNotNull(type);
-			assertFalse(type.isEmpty());
+			assertFalse("Expected at least one type matching name: " + typeName, type.isEmpty());
 		}
 	}
 
@@ -106,24 +115,14 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		return index;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see junit.framework.TestCase#setUp()
-	 */
-	@Override
-	protected void setUp() throws Exception
+	@Before
+	public void setUp() throws Exception
 	{
-		super.setUp();
-
 		uri = null;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see junit.framework.TestCase#tearDown()
-	 */
 	@Override
-	protected void tearDown() throws Exception
+	public void tearDown() throws Exception
 	{
 		if (uri != null)
 		{
@@ -134,6 +133,7 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		super.tearDown();
 	}
 
+	@Test
 	public void testSimpleType() throws Exception
 	{
 		Index index = indexResource("metadata/typeOnly.jsca");
@@ -147,6 +147,7 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		assertFalse(global.isEmpty());
 	}
 
+	@Test
 	public void testSimpleInternalType() throws Exception
 	{
 		Index index = indexResource("metadata/typeInternal.jsca");
@@ -157,9 +158,10 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		// check for global
 		Collection<PropertyElement> global = new JSIndexQueryHelper(index).getGlobals(null, "SimpleType");
 		assertNotNull(global);
-		assertTrue(global.isEmpty());
+		assertTrue("Expected no global property matching: 'SimpleType'", global.isEmpty());
 	}
 
+	@Test
 	public void testNamespacedType() throws Exception
 	{
 		Index index = indexResource("metadata/namespacedType.jsca");
@@ -173,6 +175,7 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		assertProperties(index, "com.aptana", "SimpleType");
 	}
 
+	@Test
 	public void testNamespacedTypeInternal() throws Exception
 	{
 		Index index = indexResource("metadata/namespacedTypeInternal.jsca");
@@ -183,9 +186,10 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		// check for global
 		Collection<PropertyElement> global = new JSIndexQueryHelper(index).getGlobals(null, "com");
 		assertNotNull(global);
-		assertTrue(global.isEmpty());
+		assertTrue("Expected no global property matching name 'com'", global.isEmpty());
 	}
 
+	@Test
 	public void testNamespacedTypeMixed() throws Exception
 	{
 		Index index = indexResource("metadata/namespacedTypeMixed.jsca");
@@ -199,6 +203,7 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		assertProperties(index, "com.aptana", "SimpleType2");
 	}
 
+	@Test
 	public void testIsInternalProposals() throws Exception
 	{
 		// grab source file URI
@@ -249,6 +254,7 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 	 * 
 	 * @throws CoreException
 	 */
+	@Test
 	public void testTypeUserAgentsOnProperty() throws CoreException
 	{
 		Index index = indexResource("metadata/userAgentOnType.jsca");
@@ -264,6 +270,51 @@ public class JSCAIndexingTest extends JSEditorBasedTestCase
 		assertNotNull(p);
 
 		assertUserAgents(p.getUserAgentNames(), "android", "iphone", "ipad", "mobileweb");
+	}
+
+	/**
+	 * Test for TISTUD-5989
+	 * 
+	 * @throws CoreException
+	 */
+	@Test
+	public void testChildTypeEncounteredFirstDoesntClobberFullDefinitionOfParent() throws CoreException
+	{
+		Index index = indexResource("metadata/tistud-5989.jsca");
+
+		// make sure target type exists
+		TypeElement t = assertTypeInIndex(index, "Titanium.UI", true);
+
+		PropertyElement p = t.getProperty("create2DMatrix");
+		assertNotNull(
+				"Titanium.UI is missing the create2DMatrix function. Did a temporary type not get merged with real definition?",
+				p);
+	}
+
+	/**
+	 * Test for TISTUD-6018
+	 * 
+	 * @throws CoreException
+	 */
+	@Test
+	public void testSingleTypeForParameterIsHandledProperly() throws CoreException
+	{
+		Index index = indexResource("metadata/tistud-6018.jsca");
+
+		// make sure target type exists
+		TypeElement t = assertTypeInIndex(index, "Titanium.UI", true);
+
+		PropertyElement p = t.getProperty("createView");
+		assertNotNull(
+				"Titanium.UI is missing the createView function. Did a temporary type not get merged with real definition?",
+				p);
+
+		List<ParameterElement> params = ((FunctionElement) p).getParameters();
+		assertEquals(1, params.size());
+		ParameterElement param = params.get(0);
+		List<String> types = param.getTypes();
+		assertEquals(1, types.size());
+		assertEquals("Titanium.UI.View", types.get(0));
 	}
 
 	protected IndexManager getIndexManager()

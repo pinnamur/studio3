@@ -7,18 +7,22 @@
  */
 package com.aptana.editor.js.internal.text;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Collection;
 import java.util.Map;
 
-import junit.framework.TestCase;
-
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.source.projection.ProjectionAnnotation;
+import org.junit.After;
+import org.junit.Test;
 
-import com.aptana.core.util.EclipseUtil;
 import com.aptana.editor.common.text.reconciler.IFoldingComputer;
 import com.aptana.editor.js.JSPlugin;
 import com.aptana.editor.js.preferences.IPreferenceConstants;
@@ -27,18 +31,20 @@ import com.aptana.parsing.IParseState;
 import com.aptana.parsing.ParseState;
 import com.aptana.parsing.ast.IParseRootNode;
 
-public class JSFoldingComputerTest extends TestCase
+public class JSFoldingComputerTest
 {
 
 	private IFoldingComputer folder;
 
-	@Override
-	protected void tearDown() throws Exception
+	// @Override
+	@After
+	public void tearDown() throws Exception
 	{
 		folder = null;
-		super.tearDown();
+		// super.tearDown();
 	}
 
+	@Test
 	public void testScriptdocFolding() throws Exception
 	{
 		String src = "/**\n * This is a comment.\n **/\n";
@@ -69,6 +75,7 @@ public class JSFoldingComputerTest extends TestCase
 		return folder.emitFoldingRegions(initialReconcile, new NullProgressMonitor(), ast);
 	}
 
+	@Test
 	public void testJSCommentFolding() throws Exception
 	{
 		String src = "/*\n * This is a comment.\n */\n";
@@ -79,6 +86,7 @@ public class JSFoldingComputerTest extends TestCase
 		assertTrue(positions.contains(new Position(0, src.length()))); // eats whole line at end
 	}
 
+	@Test
 	public void testJSFunctionFolding() throws Exception
 	{
 		String src = "function listItems(itemList) \n" + //
@@ -99,13 +107,14 @@ public class JSFoldingComputerTest extends TestCase
 		assertTrue(positions.contains(new Position(63, 96)));
 	}
 
+	@Test
 	public void testJSCommentInitiallyFolded() throws Exception
 	{
 		String src = "/*\n * This is a comment.\n */\n";
 
 		// Turn on initially folding comments
-		EclipseUtil.instanceScope().getNode(JSPlugin.PLUGIN_ID)
-				.putBoolean(IPreferenceConstants.INITIALLY_FOLD_COMMENTS, true);
+		InstanceScope.INSTANCE.getNode(JSPlugin.PLUGIN_ID).putBoolean(IPreferenceConstants.INITIALLY_FOLD_COMMENTS,
+				true);
 
 		Map<ProjectionAnnotation, Position> annotations = emitFoldingRegions(true, src);
 		assertTrue(annotations.keySet().iterator().next().isCollapsed());
@@ -115,6 +124,7 @@ public class JSFoldingComputerTest extends TestCase
 		assertFalse(annotations.keySet().iterator().next().isCollapsed());
 	}
 
+	@Test
 	public void testJSFunctionInitiallyFolded() throws Exception
 	{
 		String src = "function listItems(itemList) \n" + //
@@ -124,8 +134,8 @@ public class JSFoldingComputerTest extends TestCase
 				"} "; //
 
 		// Turn on initially folding functions
-		EclipseUtil.instanceScope().getNode(JSPlugin.PLUGIN_ID)
-				.putBoolean(IPreferenceConstants.INITIALLY_FOLD_FUNCTIONS, true);
+		InstanceScope.INSTANCE.getNode(JSPlugin.PLUGIN_ID).putBoolean(IPreferenceConstants.INITIALLY_FOLD_FUNCTIONS,
+				true);
 
 		Map<ProjectionAnnotation, Position> annotations = emitFoldingRegions(true, src);
 		assertTrue(annotations.keySet().iterator().next().isCollapsed());
@@ -135,6 +145,7 @@ public class JSFoldingComputerTest extends TestCase
 		assertFalse(annotations.keySet().iterator().next().isCollapsed());
 	}
 
+	@Test
 	public void testArrayInitiallyFolded() throws Exception
 	{
 		String src = "{\n" + //
@@ -146,8 +157,7 @@ public class JSFoldingComputerTest extends TestCase
 				"}"; //
 
 		// Turn on initially folding arrays
-		EclipseUtil.instanceScope().getNode(JSPlugin.PLUGIN_ID)
-				.putBoolean(IPreferenceConstants.INITIALLY_FOLD_ARRAYS, true);
+		InstanceScope.INSTANCE.getNode(JSPlugin.PLUGIN_ID).putBoolean(IPreferenceConstants.INITIALLY_FOLD_ARRAYS, true);
 
 		Map<ProjectionAnnotation, Position> annotations = emitFoldingRegions(true, src);
 		ProjectionAnnotation annotation = getByPosition(annotations, new Position(21, 64));
@@ -159,6 +169,7 @@ public class JSFoldingComputerTest extends TestCase
 		assertFalse(annotation.isCollapsed());
 	}
 
+	@Test
 	public void testObjectInitiallyFolded() throws Exception
 	{
 		String src = "object = {\n" + //
@@ -166,7 +177,7 @@ public class JSFoldingComputerTest extends TestCase
 				"};"; //
 
 		// Turn on initially folding objects
-		EclipseUtil.instanceScope().getNode(JSPlugin.PLUGIN_ID)
+		InstanceScope.INSTANCE.getNode(JSPlugin.PLUGIN_ID)
 				.putBoolean(IPreferenceConstants.INITIALLY_FOLD_OBJECTS, true);
 
 		Map<ProjectionAnnotation, Position> annotations = emitFoldingRegions(true, src);

@@ -67,9 +67,11 @@ function bar(p){
 					{
 			break;
 					}
-		default:
+		default://
+					{
 			fField.reset();
-				}
+					}
+		}
 	v = //
 	{
 		a: 0,
@@ -96,8 +98,10 @@ function bar(p) {
         {
             break;
         }
-        default:
+        default://
+        {
             fField.reset();
+        }
     }
     v = //
     {

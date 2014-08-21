@@ -1,6 +1,6 @@
 /**
  * Aptana Studio
- * Copyright (c) 2005-2012 by Appcelerator, Inc. All Rights Reserved.
+ * Copyright (c) 2005-2013 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the GNU Public License (GPL) v3 (with exceptions).
  * Please see the license.html included with this distribution for details.
  * Any modifications to this file must keep this entire header intact.
@@ -16,6 +16,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.graphics.Image;
@@ -34,6 +35,7 @@ import com.aptana.core.util.EclipseUtil;
 import com.aptana.ui.internal.WebPerspectiveFactory;
 import com.aptana.ui.preferences.IPreferenceConstants;
 import com.aptana.ui.util.UIUtils;
+import com.aptana.usage.UsagePlugin;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -113,6 +115,9 @@ public class UIPlugin extends AbstractUIPlugin
 		};
 		EclipseUtil.setSystemForJob(job);
 		job.schedule();
+
+		// force usage plugin to start
+		UsagePlugin.getDefault();
 	}
 
 	/*
@@ -174,7 +179,7 @@ public class UIPlugin extends AbstractUIPlugin
 	 */
 	private void addAutoBuildListener()
 	{
-		IEclipsePreferences node = EclipseUtil.instanceScope().getNode(ResourcesPlugin.PI_RESOURCES);
+		IEclipsePreferences node = InstanceScope.INSTANCE.getNode(ResourcesPlugin.PI_RESOURCES);
 		autoBuildListener = new AutoBuildListener();
 		node.addPreferenceChangeListener(autoBuildListener);
 	}
@@ -186,7 +191,7 @@ public class UIPlugin extends AbstractUIPlugin
 	{
 		if (autoBuildListener != null)
 		{
-			IEclipsePreferences node = EclipseUtil.instanceScope().getNode(ResourcesPlugin.PI_RESOURCES);
+			IEclipsePreferences node = InstanceScope.INSTANCE.getNode(ResourcesPlugin.PI_RESOURCES);
 			node.removePreferenceChangeListener(autoBuildListener);
 			autoBuildListener = null;
 		}
@@ -243,7 +248,7 @@ public class UIPlugin extends AbstractUIPlugin
 				IPreferenceConstants.IDE_HAS_LAUNCHED_BEFORE, false, null);
 		if (!hasStartedBefore)
 		{
-			IEclipsePreferences prefs = (EclipseUtil.instanceScope()).getNode(PLUGIN_ID);
+			IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(PLUGIN_ID);
 			prefs.putInt(IPreferenceConstants.PERSPECTIVE_VERSION, WebPerspectiveFactory.VERSION);
 			prefs.putBoolean(IPreferenceConstants.IDE_HAS_LAUNCHED_BEFORE, true);
 			try

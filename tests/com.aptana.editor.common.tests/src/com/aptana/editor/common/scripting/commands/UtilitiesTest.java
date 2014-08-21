@@ -7,21 +7,26 @@
  */
 package com.aptana.editor.common.scripting.commands;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-
-import junit.framework.TestCase;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.ide.FileStoreEditorInput;
+import org.junit.Test;
 
 import com.aptana.editor.common.CommonEditorPlugin;
 
-public class UtilitiesTest extends TestCase
+public class UtilitiesTest
 {
 
+	@Test
 	public void testGetFile()
 	{
 		File file = Utilities.getFile();
@@ -31,17 +36,28 @@ public class UtilitiesTest extends TestCase
 		assertTrue(file.getAbsolutePath().startsWith(path.toOSString() + File.separator + "_"));
 	}
 
+	@Test
 	public void testGetFileGeneratesUniqueNames()
 	{
 		Set<String> filePaths = new HashSet<String>();
 		for (int i = 0; i < 1000; i++)
 		{
-			String path = Utilities.getFile().getAbsolutePath();
+			File file = Utilities.getFile();
+			String path = file.getAbsolutePath();
 			assertFalse("Generated a non-unique filename", filePaths.contains(path));
+			try
+			{
+				file.createNewFile();
+			}
+			catch (IOException e)
+			{
+				// ignore
+			}
 			filePaths.add(path);
 		}
 	}
-	
+
+	@Test
 	public void testCreateFileEditorInputCreatesFileStoreEditorInput()
 	{
 		File file = Utilities.getFile();

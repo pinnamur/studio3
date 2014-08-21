@@ -7,22 +7,12 @@
  */
 package com.aptana.editor.js.contentassist;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
+@RunWith(Suite.class)
+@SuiteClasses({ JSUserAgentCachingTest.class, LocationTest.class, JSContentAssistProcessorTest.class, RangeTest.class })
 public class ContentAssistTests
 {
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite("Tests for com.aptana.editor.js.contentassist");
-		// $JUnit-BEGIN$
-		suite.addTestSuite(JSContentAssistProposalTest.class);
-		suite.addTestSuite(JSContextInfoTest.class);
-		suite.addTestSuite(JSUserAgentCachingTest.class);
-		suite.addTestSuite(JSUserAgentFilteringTest.class);
-		suite.addTestSuite(LocationTest.class);
-		suite.addTestSuite(RangeTest.class);
-		// $JUnit-END$
-		return suite;
-	}
 }

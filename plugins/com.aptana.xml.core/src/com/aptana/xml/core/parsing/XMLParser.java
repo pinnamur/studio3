@@ -9,25 +9,31 @@ package com.aptana.xml.core.parsing;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Stack;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import beaver.Symbol;
 
+import com.aptana.core.build.IProblem.Severity;
 import com.aptana.parsing.AbstractParser;
 import com.aptana.parsing.IParseState;
 import com.aptana.parsing.WorkingParseResult;
+import com.aptana.parsing.ast.IParseError;
 import com.aptana.parsing.ast.IParseNode;
+import com.aptana.parsing.ast.IParseNodeAttribute;
+import com.aptana.parsing.ast.ParseError;
 import com.aptana.parsing.ast.ParseNode;
+import com.aptana.parsing.ast.ParseNodeAttribute;
 import com.aptana.parsing.ast.ParseRootNode;
+import com.aptana.parsing.lexer.Range;
+import com.aptana.xml.core.IXMLConstants;
 import com.aptana.xml.core.parsing.ast.XMLCDATANode;
 import com.aptana.xml.core.parsing.ast.XMLCommentNode;
 import com.aptana.xml.core.parsing.ast.XMLElementNode;
 import com.aptana.xml.core.parsing.ast.XMLNode;
+import com.aptana.xml.core.parsing.ast.XMLNodeType;
 import com.aptana.xml.core.parsing.ast.XMLParseRootNode;
 
 public class XMLParser extends AbstractParser
@@ -41,6 +47,7 @@ public class XMLParser extends AbstractParser
 
 	private List<IParseNode> fCommentNodes;
 	protected Symbol fCurrentLexeme;
+	private WorkingParseResult fWorking;
 
 	public XMLParser()
 	{
@@ -88,6 +95,7 @@ public class XMLParser extends AbstractParser
 	protected void parse(IParseState parseState, WorkingParseResult working) throws Exception
 	{
 		fMonitor = parseState.getProgressMonitor();
+		fWorking = working;
 		fElementStack = new Stack<IParseNode>();
 
 		// create scanner and apply source
@@ -110,6 +118,7 @@ public class XMLParser extends AbstractParser
 		finally
 		{
 			fMonitor = null;
+			fWorking = null;
 			fElementStack = null;
 			fCurrentElement = null;
 			fCommentNodes.clear();
@@ -146,34 +155,101 @@ public class XMLParser extends AbstractParser
 	 * @throws IOException
 	 * @throws beaver.Scanner.Exception
 	 */
-	protected Map<String, String> parseAttributes() throws beaver.Scanner.Exception, IOException
+	protected List<IParseNodeAttribute> parseAttributes() throws beaver.Scanner.Exception, IOException
 	{
-		// NOTE: use linked hash map to preserve add order
-		Map<String, String> result = new LinkedHashMap<String, String>();
-		String name = null;
+		// NOTE: Use a list to preserve add order
+		List<IParseNodeAttribute> result = new ArrayList<IParseNodeAttribute>();
+		// ParseNodeAttribute requires a parent, so we generate a fake one while we collect attributes, then set the
+		// attributes on the true parent. True parent can't be passed in because it needs the closing tag which is past
+		// the attributes
+		IParseNode fakeParent = new XMLNode(XMLNodeType.ELEMENT, 0, 0);
+		Symbol nameSymbol = null;
+		boolean nextIsValue = false;
 		// Keep advancing until we hit EOF or GREATER or SLASH_GREATER
 		while (true)
 		{
-			advance();
-			switch (fCurrentLexeme.getId())
+			try
 			{
-				case Terminals.EOF:
-				case Terminals.GREATER:
-				case Terminals.SLASH_GREATER:
-					return result;
+				advance();
+				switch (fCurrentLexeme.getId())
+				{
+					case Terminals.EOF:
+					case Terminals.GREATER:
+					case Terminals.SLASH_GREATER:
+						// We may have an attribute name with no value left behind. Mark it as an invalid attribute (no
+						// declared value)
+						if (nameSymbol != null)
+						{
+							fWorking.addError(new ParseError(IXMLConstants.CONTENT_TYPE_XML, nameSymbol,
+									"Attribute declared with no value", Severity.ERROR));
+							String name = (String) nameSymbol.value;
+							Range nameRegion = new Range(nameSymbol.getStart(), nameSymbol.getEnd());
+							result.add(new ParseNodeAttribute(fakeParent, name, name, nameRegion, null));
+							// reset attribute name and equal tracker
+							nextIsValue = false;
+							nameSymbol = null;
+						}
+						return result;
 
-				case Terminals.IDENTIFIER:
-				case Terminals.TEXT:
-					name = (String) fCurrentLexeme.value;
-					break;
+					case Terminals.EQUAL:
+						nextIsValue = true;
+						break;
 
-				case Terminals.STRING:
-					result.put(name, (String) fCurrentLexeme.value);
-					name = null;
-					break;
+					case Terminals.IDENTIFIER:
+					case Terminals.TEXT:
+						if (nameSymbol == null)
+						{
+							// normal case, attribute name. Hold onto the symbol which holds the text and position
+							nameSymbol = fCurrentLexeme;
+						}
+						else if (nextIsValue)
+						{
+							// this is an unquoted value!
+							fWorking.addError(new ParseError(IXMLConstants.CONTENT_TYPE_XML, fCurrentLexeme,
+									"Unquoted attribute value", Severity.ERROR));
+							String name = (String) nameSymbol.value;
+							Range nameRegion = new Range(nameSymbol.getStart(), nameSymbol.getEnd());
+							result.add(new ParseNodeAttribute(fakeParent, name, (String) fCurrentLexeme.value,
+									nameRegion, new Range(fCurrentLexeme.getStart(), fCurrentLexeme.getEnd())));
+							// reset attribute name and equal tracker
+							nextIsValue = false;
+							nameSymbol = null;
+						}
+						else
+						{
+							// Last attribute was just a name, no value!
+							fWorking.addError(new ParseError(IXMLConstants.CONTENT_TYPE_XML, nameSymbol,
+									"Attribute declared with no value", Severity.ERROR));
+							String name = (String) nameSymbol.value;
+							Range nameRegion = new Range(nameSymbol.getStart(), nameSymbol.getEnd());
+							result.add(new ParseNodeAttribute(fakeParent, name, name, nameRegion, null));
+							// so this is actually the name in next attribute/value pair
+							nameSymbol = fCurrentLexeme;
+						}
+						break;
 
-				default:
-					break;
+					case Terminals.STRING:
+						String name = (String) nameSymbol.value;
+						Range nameRegion = new Range(nameSymbol.getStart(), nameSymbol.getEnd());
+						result.add(new ParseNodeAttribute(fakeParent, name, (String) fCurrentLexeme.value, nameRegion,
+								new Range(fCurrentLexeme.getStart(), fCurrentLexeme.getEnd())));
+						nextIsValue = false;
+						nameSymbol = null;
+						break;
+
+					default:
+						break;
+				}
+			}
+			catch (Throwable t)
+			{
+				// we get an Error if there's some sort of syntax error that scanner can't handle - like an unquoted
+				// attribute value starting with a digit.
+				// Try just swallowing the error and moving on?
+				fWorking.addError(new ParseError(IXMLConstants.CONTENT_TYPE_XML, fCurrentLexeme.getStart(),
+						fCurrentLexeme.getEnd() - fCurrentLexeme.getStart(), "Invalid attribute value",
+						IParseError.Severity.ERROR));
+				return result;
 			}
 		}
 	}
@@ -240,14 +316,14 @@ public class XMLParser extends AbstractParser
 		int start = fCurrentLexeme.getStart();
 		// grab the element name
 		advance();
-		String tagName = (String) fCurrentLexeme.value;
+		Symbol tag = fCurrentLexeme;
 
-		Map<String, String> attrs = parseAttributes();
+		List<IParseNodeAttribute> attrs = parseAttributes();
 
-		XMLElementNode element = new XMLElementNode(tagName, start, fCurrentLexeme);
-		for (Map.Entry<String, String> pair : attrs.entrySet())
+		XMLElementNode element = new XMLElementNode(tag, start, fCurrentLexeme);
+		for (IParseNodeAttribute attr : attrs)
 		{
-			element.setAttribute(pair.getKey(), pair.getValue());
+			element.setAttribute(attr.getName(), attr.getValue(), attr.getNameRange(), attr.getValueRange());
 		}
 		// pushes the element onto the stack
 		openElement(element);
@@ -272,6 +348,7 @@ public class XMLParser extends AbstractParser
 				processComment();
 				break;
 
+			case Terminals.TEXT:
 			case Terminals.CDATA:
 				processCDATA();
 				break;

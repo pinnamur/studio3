@@ -10,13 +10,14 @@ package com.aptana.core.internal.preferences;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Preferences;
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
+import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.osgi.service.prefs.BackingStoreException;
 
 import com.aptana.core.CorePlugin;
 import com.aptana.core.ICorePreferenceConstants;
 import com.aptana.core.logging.IdeLog;
-import com.aptana.core.util.EclipseUtil;
 
 /**
  * @author Max Stepanov
@@ -34,7 +35,7 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer
 	@Override
 	public void initializeDefaultPreferences()
 	{
-		IEclipsePreferences prefs = EclipseUtil.defaultScope().getNode(CorePlugin.PLUGIN_ID);
+		IEclipsePreferences prefs = DefaultScope.INSTANCE.getNode(CorePlugin.PLUGIN_ID);
 		prefs.putBoolean(ICorePreferenceConstants.PREF_SHOW_SYSTEM_JOBS, ICorePreferenceConstants.DEFAULT_DEBUG_MODE);
 		prefs.put(ICorePreferenceConstants.PREF_DEBUG_LEVEL, IdeLog.StatusLevel.ERROR.toString());
 		prefs.put(
@@ -50,20 +51,15 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer
 		}
 
 		// Migrate auto-refresh pref to Eclipse's
-		prefs = EclipseUtil.instanceScope().getNode(CorePlugin.PLUGIN_ID);
+		prefs = InstanceScope.INSTANCE.getNode(CorePlugin.PLUGIN_ID);
 		boolean migrated = prefs.getBoolean(MIGRATED_AUTO_REFRESH, false);
 		if (!migrated)
 		{
 			// by default, turn on auto refresh
-			boolean autoRefresh = ICorePreferenceConstants.DEFAULT_AUTO_REFRESH_PROJECTS;
-			// Check if user set a value explicitly
-			String oldValue = prefs.get(ICorePreferenceConstants.PREF_AUTO_REFRESH_PROJECTS, null);
-			if (oldValue != null)
-			{
-				// there's an explicit value set, make sure to use that.
-				autoRefresh = Boolean.valueOf(oldValue);
-			}
-			ResourcesPlugin.getPlugin().getPluginPreferences().setValue(ResourcesPlugin.PREF_AUTO_REFRESH, autoRefresh);
+			ResourcesPlugin
+					.getPlugin()
+					.getPluginPreferences()
+					.setValue(ResourcesPlugin.PREF_AUTO_REFRESH, ICorePreferenceConstants.DEFAULT_AUTO_REFRESH_PROJECTS);
 
 			// Listen for user changing auto-refresh value, when they do, don't automatically turn it on for them
 			// anymore
@@ -75,8 +71,7 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer
 						{
 							if (ResourcesPlugin.PREF_AUTO_REFRESH.equals(event.getProperty()))
 							{
-								IEclipsePreferences ourPrefs = EclipseUtil.instanceScope()
-										.getNode(CorePlugin.PLUGIN_ID);
+								IEclipsePreferences ourPrefs = InstanceScope.INSTANCE.getNode(CorePlugin.PLUGIN_ID);
 								ourPrefs.putBoolean(MIGRATED_AUTO_REFRESH, true);
 								try
 								{

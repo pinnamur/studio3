@@ -8,12 +8,12 @@
 package com.aptana.buildpath.core;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +30,7 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.QualifiedName;
 import org.osgi.framework.Bundle;
 
+import com.aptana.core.IMap;
 import com.aptana.core.logging.IdeLog;
 import com.aptana.core.util.CollectionsUtil;
 import com.aptana.core.util.ConfigurationElementDispatcher;
@@ -45,9 +46,15 @@ import com.aptana.index.core.IndexFileJob;
  */
 public class BuildPathManager
 {
-	private static final String PROJECT_BUILD_PATH_PROPERTY_NAME = "projectBuildPath"; //$NON-NLS-1$
-	private static final String NAME_AND_PATH_DELIMITER = "\t"; //$NON-NLS-1$
+	/**
+	 * cache the global list of available build paths
+	 */
+	private static final int CACHE_TIMEOUT = 30000;
+
 	private static final String BUILD_PATH_ENTRY_DELIMITER = "\0"; //$NON-NLS-1$
+	private static final String NAME_AND_PATH_DELIMITER = "\t"; //$NON-NLS-1$
+
+	private static final String PROJECT_BUILD_PATH_PROPERTY_NAME = "projectBuildPath"; //$NON-NLS-1$
 
 	private static final String BUILD_PATHS_ID = "buildPaths"; //$NON-NLS-1$
 	private static final String ELEMENT_BUILD_PATH = "buildPath"; //$NON-NLS-1$
@@ -75,8 +82,10 @@ public class BuildPathManager
 		return instance;
 	}
 
-	private Set<BuildPathEntry> buildPaths;
+	private Set<IBuildPathEntry> whitelistedBuildPaths;
 	private List<IBuildPathContributor> contributors;
+	private long fTimestamp = -1;
+	private LinkedHashSet<IBuildPathEntry> fBuildPaths;
 
 	/**
 	 * Make sure this is a singleton
@@ -89,18 +98,27 @@ public class BuildPathManager
 	 * Add a new build path entry to this manager
 	 * 
 	 * @param entry
+	 * @return whether the entry was added or not.
 	 */
-	public void addBuildPath(BuildPathEntry entry)
+	public synchronized boolean addBuildPath(IBuildPathEntry entry)
 	{
-		if (entry != null)
+		if (entry == null)
 		{
-			if (buildPaths == null)
-			{
-				buildPaths = new LinkedHashSet<BuildPathEntry>();
-			}
-
-			buildPaths.add(entry);
+			return false;
 		}
+
+		if (whitelistedBuildPaths == null)
+		{
+			// FIXME We need to synchronize on modifications and lazy init of this field!
+			whitelistedBuildPaths = new LinkedHashSet<IBuildPathEntry>();
+		}
+
+		boolean result = whitelistedBuildPaths.add(entry);
+		if (result)
+		{
+			fBuildPaths = null;
+		}
+		return result;
 	}
 
 	/**
@@ -108,22 +126,25 @@ public class BuildPathManager
 	 * 
 	 * @param project
 	 * @param entry
+	 * @return whether the entry was added or not. An entry may not get added because it already exists
 	 */
-	public void addBuildPath(IProject project, IBuildPathEntry entry)
+	public boolean addBuildPath(IProject project, IBuildPathEntry entry)
 	{
-		if (project != null && entry != null)
+		if (project == null || entry == null)
 		{
-			Set<IBuildPathEntry> buildPaths = getBuildPaths(project);
-
-			if (!buildPaths.contains(entry))
-			{
-				buildPaths.add(entry);
-
-				setBuildPaths(project, buildPaths);
-
-				index(entry);
-			}
+			return false;
 		}
+
+		// Use a copy, because we're going to modify
+		Set<IBuildPathEntry> buildPaths = new HashSet<IBuildPathEntry>(getBuildPaths(project));
+		if (buildPaths.add(entry))
+		{
+			setBuildPaths(project, buildPaths);
+			index(entry);
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -161,12 +182,13 @@ public class BuildPathManager
 	 * @param displayName
 	 * @param path
 	 */
-	public void addBuildPath(String displayName, URI path)
+	private boolean addBuildPath(String displayName, URI path)
 	{
 		if (!StringUtil.isEmpty(displayName) && path != null)
 		{
-			addBuildPath(new BuildPathEntry(displayName, path));
+			return addBuildPath(new BuildPathEntry(displayName, path));
 		}
+		return false;
 	}
 
 	/**
@@ -174,52 +196,59 @@ public class BuildPathManager
 	 * 
 	 * @param contributor
 	 */
-	protected void addContributor(IBuildPathContributor contributor)
+	private boolean addContributor(IBuildPathContributor contributor)
 	{
-		if (contributor != null)
+		if (contributor == null)
 		{
-			if (contributors == null)
-			{
-				contributors = new ArrayList<IBuildPathContributor>();
-			}
-
-			contributors.add(contributor);
+			return false;
 		}
+
+		if (contributors == null)
+		{
+			// FIXME need to synchronize on lazy init of field!
+			contributors = new ArrayList<IBuildPathContributor>();
+		}
+
+		return contributors.add(contributor);
 	}
 
-	/**
-	 * getBuildPathPropertyName
-	 * 
-	 * @return
-	 */
-	protected QualifiedName getBuildPathPropertyName()
+	private QualifiedName getBuildPathPropertyName()
 	{
 		return new QualifiedName(BuildPathCorePlugin.PLUGIN_ID, PROJECT_BUILD_PATH_PROPERTY_NAME);
 	}
 
 	/**
-	 * getBuildPaths
+	 * Returns the list of all possible valid build paths globally. Used primarily to display the list in the build path
+	 * UI for users to add/remove manually for a given project.
 	 * 
 	 * @return
 	 */
-	public Set<IBuildPathEntry> getBuildPaths()
+	public synchronized Set<IBuildPathEntry> getBuildPaths()
 	{
-		Set<IBuildPathEntry> result = new LinkedHashSet<IBuildPathEntry>();
-
-		// Add static paths, if we have any
-		if (buildPaths != null)
+		// keep a time based cache of the Set
+		if (fBuildPaths == null || System.currentTimeMillis() > fTimestamp + CACHE_TIMEOUT)
 		{
-			result.addAll(buildPaths);
+			LinkedHashSet<IBuildPathEntry> result = new LinkedHashSet<IBuildPathEntry>();
+			// Add static paths, if we have any
+			if (whitelistedBuildPaths != null)
+			{
+				result.addAll(whitelistedBuildPaths);
+			}
+
+			// Add dynamic paths
+			result.addAll(getDynamicBuildPaths());
+
+			// Now cache the result and record the time
+			fBuildPaths = result;
+			fTimestamp = System.currentTimeMillis();
 		}
 
-		// Add dynamic paths
-		result.addAll(getDynamicBuildPaths());
-
-		return result;
+		return new LinkedHashSet<IBuildPathEntry>(fBuildPaths);
 	}
 
 	/**
-	 * getBuildPaths
+	 * Returns the set of build paths for a project. This set cannot be relied upon for modifications (i.e. it is likely
+	 * to be unmodifiable). Make a copy if you plan to add/remove entries.
 	 * 
 	 * @param project
 	 * @return
@@ -227,8 +256,12 @@ public class BuildPathManager
 	// FIXME We need this to be a list, because order matters!
 	public Set<IBuildPathEntry> getBuildPaths(IProject project)
 	{
-		Set<IBuildPathEntry> result = new LinkedHashSet<IBuildPathEntry>();
+		if (project == null)
+		{
+			return Collections.emptySet();
+		}
 
+		Set<IBuildPathEntry> result = new LinkedHashSet<IBuildPathEntry>();
 		try
 		{
 			String property = project.getPersistentProperty(getBuildPathPropertyName());
@@ -236,7 +269,6 @@ public class BuildPathManager
 			if (property != null)
 			{
 				String[] entries = property.split(BUILD_PATH_ENTRY_DELIMITER);
-
 				for (String entry : entries)
 				{
 					String[] nameAndPath = entry.split(NAME_AND_PATH_DELIMITER);
@@ -249,10 +281,9 @@ public class BuildPathManager
 						try
 						{
 							URI path = new URI(uri);
-
 							result.add(new BuildPathEntry(name, path));
 						}
-						catch (URISyntaxException e)
+						catch (Exception e)
 						{
 							// @formatter:off
 							String message = MessageFormat.format(
@@ -282,41 +313,50 @@ public class BuildPathManager
 			IdeLog.logError(BuildPathCorePlugin.getDefault(), message, e);
 		}
 
+		// OK, now grab the build paths contributed dynamically by contributors for this project!
+		if (contributors != null)
+		{
+			for (IBuildPathContributor contributor : contributors)
+			{
+				List<IBuildPathEntry> entries = contributor.getBuildPathEntries(project);
+				if (!CollectionsUtil.isEmpty(entries))
+				{
+					result.addAll(entries);
+				}
+			}
+		}
+
 		if (!result.isEmpty())
 		{
 			// only include paths that are actually registered
 			result.retainAll(getBuildPaths());
 		}
 
-		return result;
+		// Don't allow modifications!
+		return Collections.unmodifiableSet(result);
 	}
 
 	/**
-	 * getDynamicBuildPaths
+	 * The set of globally available whitelisted build paths contributed by extensions.
 	 * 
 	 * @return
 	 */
 	private Set<IBuildPathEntry> getDynamicBuildPaths()
 	{
-		Set<IBuildPathEntry> result;
-
-		if (contributors != null)
+		if (CollectionsUtil.isEmpty(contributors))
 		{
-			result = new LinkedHashSet<IBuildPathEntry>();
-
-			for (IBuildPathContributor contributor : contributors)
-			{
-				List<IBuildPathEntry> files = contributor.getBuildPathEntries();
-
-				if (files != null)
-				{
-					result.addAll(files);
-				}
-			}
+			return Collections.emptySet();
 		}
-		else
+
+		Set<IBuildPathEntry> result = new LinkedHashSet<IBuildPathEntry>(contributors.size());
+		for (IBuildPathContributor contributor : contributors)
 		{
-			result = Collections.emptySet();
+			List<IBuildPathEntry> files = contributor.getBuildPathEntries();
+
+			if (files != null)
+			{
+				result.addAll(files);
+			}
 		}
 
 		return result;
@@ -328,13 +368,13 @@ public class BuildPathManager
 	 * @param entry
 	 * @return
 	 */
-	public boolean hasBuildPath(BuildPathEntry entry)
+	public boolean hasBuildPath(IBuildPathEntry entry)
 	{
 		return getBuildPaths().contains(entry);
 	}
 
 	/**
-	 * hasBuildPath
+	 * Does a given build path entry exist in the set attached to a project?
 	 * 
 	 * @param project
 	 * @param entry
@@ -342,16 +382,12 @@ public class BuildPathManager
 	 */
 	public boolean hasBuildPath(IProject project, IBuildPathEntry entry)
 	{
-		boolean result = false;
-
-		if (project != null && entry != null)
+		if (project == null || entry == null)
 		{
-			Set<IBuildPathEntry> buildPathSet = getBuildPaths(project);
-
-			result = buildPathSet.contains(entry);
+			return false;
 		}
 
-		return result;
+		return getBuildPaths(project).contains(entry);
 	}
 
 	private class BuildPathProcessor implements IConfigurationElementProcessor
@@ -499,12 +535,19 @@ public class BuildPathManager
 	 * 
 	 * @param entry
 	 */
-	public void removeBuildPath(BuildPathEntry entry)
+	public synchronized boolean removeBuildPath(IBuildPathEntry entry)
 	{
-		if (entry != null && buildPaths != null)
+		if (entry == null || whitelistedBuildPaths == null)
 		{
-			buildPaths.remove(entry);
+			return false;
 		}
+
+		boolean result = whitelistedBuildPaths.remove(entry);
+		if (result)
+		{
+			fBuildPaths = null;
+		}
+		return result;
 	}
 
 	/**
@@ -513,35 +556,22 @@ public class BuildPathManager
 	 * @param project
 	 * @param entry
 	 */
-	public void removeBuildPath(IProject project, IBuildPathEntry entry)
+	public boolean removeBuildPath(IProject project, IBuildPathEntry entry)
 	{
-		if (project != null && entry != null)
+		if (project == null || entry == null)
 		{
-			Set<IBuildPathEntry> entries = getBuildPaths(project);
-
-			if (entries.contains(entry))
-			{
-				entries.remove(entry);
-
-				setBuildPaths(project, entries);
-
-				// TODO Remove the index for it? Don't we need to see if no other references to it are out there?
-			}
+			return false;
 		}
-	}
 
-	/**
-	 * Remove an existing build path from this manager
-	 * 
-	 * @param displayName
-	 * @param path
-	 */
-	public void removeBuildPath(String displayName, URI path)
-	{
-		if (!StringUtil.isEmpty(displayName) && path != null)
+		// Use a copy!
+		Set<IBuildPathEntry> entries = new HashSet<IBuildPathEntry>(getBuildPaths(project));
+		if (entries.remove(entry))
 		{
-			removeBuildPath(new BuildPathEntry(displayName, path));
+			setBuildPaths(project, entries);
+			// TODO Remove the index for it? Don't we need to see if no other references to it are out there?
+			return true;
 		}
+		return false;
 	}
 
 	/**
@@ -550,30 +580,33 @@ public class BuildPathManager
 	 * @param project
 	 * @param entries
 	 */
-	public void setBuildPaths(IProject project, Collection<IBuildPathEntry> entries)
+	public boolean setBuildPaths(IProject project, Collection<IBuildPathEntry> entries)
 	{
-		if (project != null && entries != null)
+		if (project == null || entries == null)
 		{
-			List<String> nameAndPaths = new ArrayList<String>();
+			return false;
+		}
 
-			for (IBuildPathEntry entry : entries)
+		List<String> nameAndPaths = CollectionsUtil.map(entries, new IMap<IBuildPathEntry, String>()
+		{
+			public String map(IBuildPathEntry item)
 			{
-				String nameAndPath = entry.getDisplayName() + NAME_AND_PATH_DELIMITER + entry.getPath();
-
-				nameAndPaths.add(nameAndPath);
+				return item.getDisplayName() + NAME_AND_PATH_DELIMITER + item.getPath();
 			}
+		});
 
-			String value = StringUtil.join(BUILD_PATH_ENTRY_DELIMITER, nameAndPaths);
+		String value = StringUtil.join(BUILD_PATH_ENTRY_DELIMITER, nameAndPaths);
 
-			// FIXME This severely limits the value's size, which we could run into over time! It also does not make the
-			// value portable across users/workspaces
-			try
-			{
-				project.setPersistentProperty(getBuildPathPropertyName(), value);
-			}
-			catch (CoreException e)
-			{
-				// @formatter:off
+		// FIXME This severely limits the value's size, which we could run into over time! It also does not make the
+		// value portable across users/workspaces
+		try
+		{
+			project.setPersistentProperty(getBuildPathPropertyName(), value);
+			return true;
+		}
+		catch (CoreException e)
+		{
+			// @formatter:off
 				String message = MessageFormat.format(
 					Messages.BuildPathManager_UnableToSetPersistenceProperty,
 					PROJECT_BUILD_PATH_PROPERTY_NAME,
@@ -581,8 +614,8 @@ public class BuildPathManager
 				);
 				// @formatter:on
 
-				IdeLog.logError(BuildPathCorePlugin.getDefault(), message, e);
-			}
+			IdeLog.logError(BuildPathCorePlugin.getDefault(), message, e);
+			return false;
 		}
 	}
 }

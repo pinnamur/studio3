@@ -7,17 +7,20 @@
  */
 package com.aptana.editor.html.validator;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.List;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
+import org.junit.Test;
 
 import com.aptana.buildpath.core.tests.AbstractValidatorTestCase;
 import com.aptana.core.build.IBuildParticipant;
 import com.aptana.core.build.IProblem;
 import com.aptana.css.core.ICSSConstants;
 import com.aptana.editor.html.HTMLPlugin;
-import com.aptana.editor.html.IHTMLConstants;
+import com.aptana.editor.html.core.IHTMLConstants;
 import com.aptana.editor.html.parsing.HTMLParseState;
 import com.aptana.js.core.IJSConstants;
 
@@ -42,6 +45,13 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 		return "html";
 	}
 
+	@Override
+	protected String getContentType()
+	{
+		return IHTMLConstants.CONTENT_TYPE_HTML;
+	}
+
+	@Test
 	public void testHTMLSelfClosingTagOnNonVoidElement() throws CoreException
 	{
 		String text = "<html>\n<title>test</title>\n<body>\n<video />\n</body>\n</html>\n";
@@ -55,6 +65,7 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 				"Self-closing syntax (/>) used on a non-void HTML element", item.getMessage());
 	}
 
+	@Test
 	public void testHTMLMissingEndTag() throws CoreException
 	{
 		String text = "<html>\n<title>test\n<body>\n</body>\n</html>";
@@ -64,6 +75,7 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 		assertContains(items, "Missing end tag </title>");
 	}
 
+	@Test
 	public void testHTMLMissingEndOpenTag() throws CoreException
 	{
 		String text = "<html>\n<body>\n<a\n</body>\n</html>";
@@ -73,6 +85,7 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 		assertContains(items, "\"<\" missing '>' for end of tag");
 	}
 
+	@Test
 	public void testHTMLNoErrors() throws CoreException
 	{
 		String text = "<html>\n<title>test</title>\n<body>\n</body>\n</html>";
@@ -81,6 +94,7 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testHTMLEmbeddedCSSParseError() throws CoreException
 	{
 		String text = "<html>\n<style>\ndiv#paginator {\nfloat: left\nwidth: 65px\n}\n</style>\n<title>test</title>\n<body></body>\n</html>";
@@ -97,6 +111,7 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 				item.getMessage());
 	}
 
+	@Test
 	public void testNoHTMLEmbeddedCSSParseError() throws CoreException
 	{
 		String text = "<html>\n<style>\ndiv#paginator {\nfloat: left;\nwidth: 65px\n}\n</style>\n<title>test</title>\n<body></body>\n</html>";
@@ -108,6 +123,7 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, cssProblems.size());
 	}
 
+	@Test
 	public void testNoHTMLEmbeddedJSParseError() throws CoreException
 	{
 		String text = "<html>\n<script>\nvar foo = function() {\nhello();\n};\n</script>\n<title>test</title>\n<body></body>\n</html>";
@@ -119,6 +135,7 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 		assertEquals("A validation error was found in valid html with embedded js", 0, jsProblems.size());
 	}
 
+	@Test
 	public void testHTMLEmbeddedJSParseError() throws CoreException
 	{
 		String text = "<html>\n<script>\nvar foo = function() {\nhello(\n};\n</script>\n<title>test</title>\n<body></body>\n</html>";
@@ -127,18 +144,15 @@ public class HTMLParseErrorValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, htmlProblems.size());
 
 		List<IProblem> jsProblems = getParseErrors(text, IJSConstants.JS_PROBLEM_MARKER_TYPE);
-		assertEquals(2, jsProblems.size());
-
+		assertEquals(1, jsProblems.size());
 		IProblem item = jsProblems.get(0);
+
 		assertEquals("Error was not found on expected line", 5, item.getLineNumber());
 		assertEquals("Error message did not match expected error message", "Syntax Error: unexpected token \"}\"",
 				item.getMessage());
-		
-		item = jsProblems.get(1);
-		assertEquals("Warning was not found on expected line", 4, item.getLineNumber());
-		assertEquals("Warning message did not match expected message", "Missing semicolon", item.getMessage());
 	}
 
+	@Test
 	public void testInvalidClosingTag() throws CoreException
 	{
 		// @formatter:off

@@ -9,6 +9,7 @@ package com.aptana.jira.core;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -17,15 +18,30 @@ import java.text.MessageFormat;
 import java.util.Map;
 import java.util.regex.Matcher;
 
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.UsernamePasswordCredentials;
-import org.apache.commons.httpclient.auth.AuthScope;
-import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.methods.multipart.FilePart;
-import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
-import org.apache.commons.httpclient.methods.multipart.Part;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpResponse;
+import org.apache.http.StatusLine;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.AuthCache;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.params.ClientPNames;
+import org.apache.http.client.protocol.ClientContext;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.content.FileBody;
+import org.apache.http.impl.auth.BasicScheme;
+import org.apache.http.impl.client.AbstractHttpClient;
+import org.apache.http.impl.client.BasicAuthCache;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.protocol.BasicHttpContext;
 import org.eclipse.core.internal.preferences.Base64;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.equinox.security.storage.ISecurePreferences;
 import org.eclipse.equinox.security.storage.SecurePreferencesFactory;
 import org.osgi.framework.Version;
@@ -35,6 +51,8 @@ import com.aptana.core.util.EclipseUtil;
 import com.aptana.core.util.IOUtil;
 import com.aptana.core.util.StringUtil;
 import com.aptana.jetty.util.epl.ajax.JSON;
+import com.aptana.jira.core.internal.JiraProjectsRegistry;
+import com.aptana.jira.core.internal.JiraProjectsRegistry.JiraProjectInfo;
 
 /**
  * @author cwilliams
@@ -95,6 +113,22 @@ public class JiraManager
 	JiraManager()
 	{
 		loadCredentials();
+		loadProjectInfo();
+	}
+
+	private void loadProjectInfo()
+	{
+		JiraProjectsRegistry projectsRegistry = getJiraProjectsRegistry();
+		JiraProjectInfo projectProvider = projectsRegistry.getProjectInfo();
+		if (projectProvider != null)
+		{
+			setProjectInfo(projectProvider.getProjectName(), projectProvider.getProjectCode());
+		}
+	}
+
+	protected JiraProjectsRegistry getJiraProjectsRegistry()
+	{
+		return new JiraProjectsRegistry();
 	}
 
 	/**
@@ -112,9 +146,10 @@ public class JiraManager
 	 *            the username
 	 * @param password
 	 *            the password
-	 * @throws JiraException
+	 * @return {@link IStatus} indicating the result. OK represents successful login. Otherwise the status code holds
+	 *         the HTTP response code, and the body may hold the response body
 	 */
-	public void login(String username, String password) throws JiraException
+	public IStatus login(String username, String password)
 	{
 		HttpURLConnection connection = null;
 		try
@@ -125,18 +160,21 @@ public class JiraManager
 			{
 				this.user = new JiraUser(username, password);
 				saveCredentials();
-				return;
+				return Status.OK_STATUS;
 			}
 
 			if (code == HttpURLConnection.HTTP_UNAUTHORIZED || code == HttpURLConnection.HTTP_FORBIDDEN)
 			{
-				throw new JiraException(Messages.JiraManager_BadCredentialsErrMsg);
+				return new Status(IStatus.ERROR, JiraCorePlugin.PLUGIN_ID, code,
+						Messages.JiraManager_BadCredentialsErrMsg, null);
 			}
-			throw new JiraException(Messages.JiraManager_UnknownErrMsg);
+			String msg = IOUtil.read(connection.getInputStream());
+			return new Status(IStatus.ERROR, JiraCorePlugin.PLUGIN_ID, code, Messages.JiraManager_UnknownErrMsg + ": "
+					+ msg, null);
 		}
 		catch (Exception e)
 		{
-			throw new JiraException(e.getMessage(), e);
+			return new Status(IStatus.ERROR, JiraCorePlugin.PLUGIN_ID, e.getMessage(), e);
 		}
 		finally
 		{
@@ -337,31 +375,41 @@ public class JiraManager
 		}
 
 		// Use Apache HTTPClient to POST the file
-		HttpClient httpclient = new HttpClient();
-		UsernamePasswordCredentials creds = new UsernamePasswordCredentials(user.getUsername(), user.getPassword());
-		httpclient.getState().setCredentials(new AuthScope(HOST_NAME, 443), creds);
-		httpclient.getParams().setAuthenticationPreemptive(true);
-		PostMethod filePost = null;
+		AbstractHttpClient httpclient = createClient();
+
+		// Set up pre-emptive basic auth
+		AuthCache authCache = new BasicAuthCache();
+		BasicScheme basicAuth = new BasicScheme();
+		HttpHost targetHost = new HttpHost(HOST_NAME, 443, "https"); //$NON-NLS-1$
+		authCache.put(targetHost, basicAuth);
+		BasicHttpContext localcontext = new BasicHttpContext();
+		localcontext.setAttribute(ClientContext.AUTH_CACHE, authCache);
+
+		HttpPost filePost = null;
 		try
 		{
-			filePost = new PostMethod(createAttachmentURL(issue));
+			filePost = new HttpPost(createAttachmentURL(issue));
 			File file = path.toFile();
-			// MUST USE "file" AS THE NAME!!!
-			Part[] parts = { new FilePart("file", file) }; //$NON-NLS-1$
-			filePost.setRequestEntity(new MultipartRequestEntity(parts, filePost.getParams()));
-			filePost.setContentChunked(true);
-			filePost.setDoAuthentication(true);
-			// Special header to tell JIRA not to do XSFR checking
-			filePost.setRequestHeader("X-Atlassian-Token", "nocheck"); //$NON-NLS-1$ //$NON-NLS-2$
 
-			int responseCode = httpclient.executeMethod(filePost);
+			MultipartEntity reqEntity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+			// MUST USE "file" AS THE NAME!!!
+			reqEntity.addPart("file", new FileBody(file)); //$NON-NLS-1$
+			filePost.setEntity(reqEntity);
+			// Special header to tell JIRA not to do XSFR checking
+			filePost.addHeader(new BasicHeader("X-Atlassian-Token", "nocheck")); //$NON-NLS-1$ //$NON-NLS-2$
+
+			HttpResponse response = post(httpclient, targetHost, filePost, localcontext);
+			StatusLine sl = response.getStatusLine();
+			int responseCode = sl.getStatusCode();
+			HttpEntity respEntity = response.getEntity();
+			InputStream in = respEntity.getContent();
 			if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_CREATED)
 			{
 				// TODO This is a JSON response that we should parse out "errorMessages" value(s) (its an array of
 				// strings).
-				throw new JiraException(filePost.getResponseBodyAsString());
+				throw new JiraException(IOUtil.read(in));
 			}
-			String json = filePost.getResponseBodyAsString();
+			String json = IOUtil.read(in);
 			IdeLog.logInfo(JiraCorePlugin.getDefault(), json);
 		}
 		catch (JiraException e)
@@ -374,11 +422,33 @@ public class JiraManager
 		}
 		finally
 		{
-			if (filePost != null)
-			{
-				filePost.releaseConnection();
-			}
+			closeConnection(httpclient);
 		}
+	}
+
+	protected void closeConnection(AbstractHttpClient httpclient)
+	{
+		if (httpclient == null)
+		{
+			return;
+		}
+		httpclient.getConnectionManager().shutdown();
+	}
+
+	protected HttpResponse post(AbstractHttpClient httpclient, HttpHost targetHost, HttpPost filePost,
+			BasicHttpContext localcontext) throws ClientProtocolException, IOException
+	{
+		return httpclient.execute(targetHost, filePost, localcontext);
+	}
+
+	protected AbstractHttpClient createClient()
+	{
+		DefaultHttpClient httpclient = new DefaultHttpClient();
+		UsernamePasswordCredentials creds = new UsernamePasswordCredentials(user.getUsername(), user.getPassword());
+		httpclient.getCredentialsProvider().setCredentials(new AuthScope(HOST_NAME, 443), creds);
+		httpclient.getParams().setBooleanParameter(ClientPNames.HANDLE_AUTHENTICATION, true);
+
+		return httpclient;
 	}
 
 	protected String createAttachmentURL(JiraIssue issue)
@@ -439,7 +509,7 @@ public class JiraManager
 		}
 	}
 
-	private String getProjectVersion()
+	protected String getProjectVersion()
 	{
 		String versionStr = EclipseUtil.getStudioVersion();
 		// we don't need the qualifier

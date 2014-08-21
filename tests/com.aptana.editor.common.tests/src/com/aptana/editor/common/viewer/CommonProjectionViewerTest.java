@@ -1,9 +1,15 @@
 package com.aptana.editor.common.viewer;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.ITextViewer;
@@ -14,6 +20,7 @@ import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
+import org.junit.Test;
 import org.osgi.framework.Bundle;
 
 import com.aptana.core.util.EclipseUtil;
@@ -37,13 +44,14 @@ public class CommonProjectionViewerTest extends EditorBasedTests
 	 * 
 	 * @throws IOException
 	 */
+	@Test
 	public void testSnippetProposalActivation() throws IOException
 	{
 
 		IFileStore fileStore = createFileStore("proposal_tests", "html", "");
 		this.setupTestContext(fileStore);
 
-		IEclipsePreferences prefs = EclipseUtil.instanceScope().getNode(CommonEditorPlugin.PLUGIN_ID);
+		IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(CommonEditorPlugin.PLUGIN_ID);
 		int delay = prefs.getInt(IPreferenceConstants.CONTENT_ASSIST_DELAY,
 				CommonSourceViewerConfiguration.DEFAULT_CONTENT_ASSIST_DELAY);
 
@@ -70,6 +78,7 @@ public class CommonProjectionViewerTest extends EditorBasedTests
 		prefs.putInt(IPreferenceConstants.CONTENT_ASSIST_DELAY, delay);
 	}
 
+	@Test
 	public void testCreateFormattingContextText()
 	{
 		IFileStore fileStore = createFileStore("proposal_tests", "txt", "");
@@ -83,6 +92,7 @@ public class CommonProjectionViewerTest extends EditorBasedTests
 		context.dispose();
 	}
 
+	@Test
 	public void testCreateFormattingContextHtml()
 	{
 		IFileStore fileStore = createFileStore("proposal_tests", "html", "");

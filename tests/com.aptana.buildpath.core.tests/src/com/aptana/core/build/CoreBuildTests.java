@@ -1,22 +1,12 @@
 package com.aptana.core.build;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-public class CoreBuildTests extends TestCase
+@RunWith(Suite.class)
+@Suite.SuiteClasses({ AbstractBuildParticipantTest.class, ReconcileContextTest.class,
+		RequiredBuildParticipantTest.class, UnifiedBuilderTest.class })
+public class CoreBuildTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(CoreBuildTests.class.getName());
-		// $JUnit-BEGIN$
-		suite.addTestSuite(AbstractBuildParticipantTest.class);
-		suite.addTestSuite(ReconcileContextTest.class);
-		suite.addTestSuite(RequiredBuildParticipantTest.class);
-		suite.addTestSuite(UnifiedBuilderTest.class);
-		// $JUnit-END$
-		return suite;
-	}
 
 }

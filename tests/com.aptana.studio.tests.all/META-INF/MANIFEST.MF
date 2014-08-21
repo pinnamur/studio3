@@ -3,11 +3,10 @@ Bundle-ManifestVersion: 2
 Bundle-Name: %pluginName
 Bundle-SymbolicName: com.aptana.studio.tests.all
 Bundle-Version: 1.0.0.qualifier
-Bundle-Activator: com.aptana.studio.tests.all.Activator
 Bundle-Vendor: %providerName
 Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.core.resources;bundle-version="3.4.0",
- org.junit,
+ org.junit;bundle-version="4.0.0",
  com.aptana.editor.common,
  com.aptana.editor.css,
  com.aptana.editor.findbar,
@@ -38,7 +37,6 @@ Require-Bundle: org.eclipse.core.runtime,
  com.aptana.org.eclipse.tm.terminal,
  org.eclipse.test.performance,
  org.eclipse.core.tests.harness,
- com.aptana.filesystem.s3,
  com.aptana.editor.dtd,
  com.aptana.editor.css.formatter,
  com.aptana.editor.json,
@@ -53,7 +51,9 @@ Require-Bundle: org.eclipse.core.runtime,
  com.aptana.buildpath.core,
  com.aptana.jira.core,
  com.aptana.filesystem.http;bundle-version="3.0.0",
- com.aptana.js.core;bundle-version="3.0.0"
+ com.aptana.js.core;bundle-version="3.0.0",
+ com.aptana.usage;bundle-version="3.0.0",
+ com.aptana.js.debug.core;bundle-version="3.0.3",
+ com.aptana.ui;bundle-version="3.1.4"
 Bundle-RequiredExecutionEnvironment: J2SE-1.5
-Bundle-ActivationPolicy: lazy
 Export-Package: com.aptana.studio.tests.all

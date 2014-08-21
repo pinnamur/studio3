@@ -7,31 +7,52 @@
  */
 package com.aptana.core.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-
-import junit.framework.TestCase;
+import java.util.Random;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
+import org.junit.Test;
 
-public class FileUtilTest extends TestCase
+public class FileUtilTest
 {
 
+	@Test
 	public void testIsDirectoryAccessible()
 	{
 		assertFalse("null directory argument should return false", FileUtil.isDirectoryAccessible(null));
 		IPath tmp = FileUtil.getTempDirectory();
 		IPath subdir = tmp.append("subdir" + System.currentTimeMillis());
-		assertTrue("tmp dir should be accessible", FileUtil.isDirectoryAccessible(tmp.toFile()));
-		assertFalse("Non-existant directory shouldn't be accessible", FileUtil.isDirectoryAccessible(subdir.toFile()));
-		assertTrue("Failed to create subdir of tmp dir", subdir.toFile().mkdirs());
-		assertTrue("After creating subdir, it should be accessible", FileUtil.isDirectoryAccessible(subdir.toFile()));
-		// TODO Use chmod to not allow directory to be accessible?
+		try
+		{
+			assertTrue("tmp dir should be accessible", FileUtil.isDirectoryAccessible(tmp.toFile()));
+			assertFalse("Non-existant directory shouldn't be accessible",
+					FileUtil.isDirectoryAccessible(subdir.toFile()));
+			assertTrue("Failed to create subdir of tmp dir", subdir.toFile().mkdirs());
+			assertTrue("After creating subdir, it should be accessible",
+					FileUtil.isDirectoryAccessible(subdir.toFile()));
+			// TODO Use chmod to not allow directory to be accessible?
+		}
+		finally
+		{
+			File blah = subdir.toFile();
+			if (!FileUtil.deleteRecursively(blah))
+			{
+				blah.deleteOnExit();
+			}
+		}
 	}
 
+	@Test
 	public void testCompressPath()
 	{
 		String path = "c:/Documents and Settings/username/My Documents/workspace/whatever.txt";
@@ -39,17 +60,20 @@ public class FileUtilTest extends TestCase
 		assertEquals(path, FileUtil.compressPath(path, 100));
 	}
 
+	@Test
 	public void testCompressPathForNull()
 	{
 		assertNull(FileUtil.compressPath(null, 10));
 	}
 
+	@Test
 	public void testCompressPathNoSlash()
 	{
 		String path = "a_path_with_no_slash";
 		assertEquals(path, FileUtil.compressPath(path, 10));
 	}
 
+	@Test
 	public void testCompressPathSingleSlash()
 	{
 		String path = "test/compress_path";
@@ -57,12 +81,14 @@ public class FileUtilTest extends TestCase
 		assertEquals(path, FileUtil.compressPath(path, 15));
 	}
 
+	@Test
 	public void testCompressPathLastPathLongerThanDesiredLength()
 	{
 		String path = "test/compress/a_really_long_last_path";
 		assertEquals("test/.../a_really_long_last_path", FileUtil.compressPath(path, 30));
 	}
 
+	@Test
 	public void testCompressLeadingPath()
 	{
 		String path = "c:/Documents and Settings/username/My Documents/workspace/whatever.txt";
@@ -70,34 +96,40 @@ public class FileUtilTest extends TestCase
 		assertEquals(path, FileUtil.compressLeadingPath(path, 100));
 	}
 
+	@Test
 	public void testCompressLeadingPathForNull()
 	{
 		assertNull(FileUtil.compressLeadingPath(null, 10));
 	}
 
+	@Test
 	public void testCompressLeadingPathLastPathLongerThanDesiredLength()
 	{
 		String path = "test/a_really_long_last_path";
 		assertEquals(path, FileUtil.compressLeadingPath(path, 20));
 	}
 
+	@Test
 	public void testGetExtension()
 	{
 		String filename = "test.html";
 		assertEquals("html", FileUtil.getExtension(filename));
 	}
 
+	@Test
 	public void testEmptyExtension()
 	{
 		String filename = "test";
 		assertEquals(StringUtil.EMPTY, FileUtil.getExtension(filename));
 	}
 
+	@Test
 	public void testGetExtensionForNull()
 	{
 		assertNull(FileUtil.getExtension(null));
 	}
 
+	@Test
 	public void testGetRandomFileName()
 	{
 		String prefix = "test";
@@ -119,6 +151,7 @@ public class FileUtilTest extends TestCase
 		}
 	}
 
+	@Test
 	public void testGetRandomFileNameWithNullPrefixSuffix()
 	{
 		String filename = FileUtil.getRandomFileName(null, null);
@@ -132,6 +165,7 @@ public class FileUtilTest extends TestCase
 		}
 	}
 
+	@Test
 	public void testDeleteRecursively() throws Exception
 	{
 		File rootDir = File.createTempFile("deleteTest", Long.toString(System.nanoTime()));
@@ -158,11 +192,13 @@ public class FileUtilTest extends TestCase
 		}
 	}
 
+	@Test
 	public void testDeleteRecursivelyForNull()
 	{
 		assertFalse(FileUtil.deleteRecursively(null));
 	}
 
+	@Test
 	public void testGatherFilesFromCommandLineArguments()
 	{
 		String[] arguments = { "-os", "macosx", "-ws", "cocoa", "-arch", "x86", "-debug", "-keyring",
@@ -188,11 +224,13 @@ public class FileUtilTest extends TestCase
 		}
 	}
 
+	@Test
 	public void testCountFilesWithNullArg()
 	{
 		assertEquals(0, FileUtil.countFiles(null));
 	}
 
+	@Test
 	public void testCountFilesWithSingleFile() throws Exception
 	{
 		File file = File.createTempFile("delete_me", null);
@@ -200,9 +238,10 @@ public class FileUtilTest extends TestCase
 		assertEquals(1, FileUtil.countFiles(file));
 	}
 
+	@Test
 	public void testCountFilesWithDirectory() throws Exception
 	{
-		File dir = new File(FileUtil.getTempDirectory().toOSString(), "count_dir_" + System.currentTimeMillis());
+		File dir = FileUtil.getTempDirectory().append("count_dir_" + System.currentTimeMillis()).toFile();
 		try
 		{
 			dir.mkdirs();
@@ -219,9 +258,10 @@ public class FileUtilTest extends TestCase
 		}
 	}
 
+	@Test
 	public void testCountFilesWithMultipleDirectories() throws Exception
 	{
-		File dir = new File(FileUtil.getTempDirectory().toOSString(), "count_dir_" + System.currentTimeMillis());
+		File dir = FileUtil.getTempDirectory().append("count_dir_" + System.currentTimeMillis()).toFile();
 		try
 		{
 			dir.mkdirs();
@@ -246,10 +286,10 @@ public class FileUtilTest extends TestCase
 	}
 
 	// TODO Add test for countFiles with symlink loop?
-
+	@Test
 	public void testCountFilesWithMultipleDirectoriesAndSymlinkLoop() throws Exception
 	{
-		File dir = new File(FileUtil.getTempDirectory().toOSString(), "count_dir_" + System.currentTimeMillis());
+		File dir = FileUtil.getTempDirectory().append("count_dir_" + System.currentTimeMillis()).toFile();
 		try
 		{
 			dir.mkdirs();
@@ -264,8 +304,8 @@ public class FileUtilTest extends TestCase
 					new File(subDir, Integer.toString(i)).createNewFile();
 				}
 
-				IStatus status = ProcessUtil.runInBackground("ln", Path.fromOSString(subDir.getAbsolutePath()), "-s",
-						dir.getAbsolutePath(), "symlink");
+				IStatus status = new ProcessRunner().runInBackground(Path.fromOSString(subDir.getAbsolutePath()), "ln",
+						"-s", dir.getAbsolutePath(), "symlink");
 				assertTrue(status.isOK());
 			}
 			assertEquals(dirCount * (fileCount + 1), FileUtil.countFiles(dir));
@@ -276,6 +316,7 @@ public class FileUtilTest extends TestCase
 		}
 	}
 
+	@Test
 	public void testChmodAndGetPermissions() throws Exception
 	{
 		if (PlatformUtil.isWindows())
@@ -283,19 +324,23 @@ public class FileUtilTest extends TestCase
 			return;
 		}
 
-		for (int i = 7; i >= 0; i--)
+		File file = File.createTempFile("chmod", null);
+		IPath filePath = Path.fromOSString(file.getAbsolutePath());
+		Random r = new Random();
+		try
 		{
-			for (int j = 7; j >= 0; j--)
+			// Spot check 10 permissions
+			for (int n = 0; n < 10; n++)
 			{
-				for (int k = 7; k >= 0; k--)
-				{
-					File file = File.createTempFile("chmod", null);
-					String permString = Integer.toString(i) + Integer.toString(j) + Integer.toString(k);
-					FileUtil.chmod(permString, file);
-					assertEquals(Integer.parseInt(permString, 8),
-							Integer.parseInt(FileUtil.getPermissions(Path.fromOSString(file.getAbsolutePath())), 8));
-				}
+				int i = r.nextInt(512);
+				String permString = StringUtil.pad(Integer.toString(i, 8), 3, '0');
+				FileUtil.chmod(permString, file);
+				assertEquals(permString, FileUtil.getPermissions(filePath));
 			}
+		}
+		finally
+		{
+			file.delete();
 		}
 	}
 }

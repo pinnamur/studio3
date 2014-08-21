@@ -7,13 +7,19 @@
  */
 package com.aptana.editor.js.contentassist;
 
+import static org.junit.Assert.fail;
+
 import java.net.URI;
 
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.junit.Before;
+import org.junit.Test;
 
+import com.aptana.core.util.EclipseUtil;
 import com.aptana.core.util.StringUtil;
 import com.aptana.editor.common.CommonEditorPlugin;
 import com.aptana.editor.common.contentassist.IPreferenceConstants;
@@ -45,7 +51,7 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 	private static final String TWO_USER_AGENTS = "IE,Safari";
 	private static final String THREE_USER_AGENTS = "IE,Safari,Firefox";
 
-	private IPreferenceStore preferences;
+	private IEclipsePreferences prefs;
 
 	protected void indexAndCheckProposals(String preference, String indexResource, String fileResource,
 			String... proposals)
@@ -92,16 +98,25 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		return IndexPlugin.getDefault().getIndexManager();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see junit.framework.TestCase#setUp()
-	 */
-	@Override
-	protected void setUp() throws Exception
+	@Before
+	public void setUp() throws Exception
 	{
-		super.setUp();
+		prefs = InstanceScope.INSTANCE.getNode(CommonEditorPlugin.PLUGIN_ID);
+	}
 
-		preferences = CommonEditorPlugin.getDefault().getPreferenceStore();
+	@Override
+	public void tearDown() throws Exception
+	{
+		try
+		{
+			prefs.remove(IPreferenceConstants.USER_AGENT_PREFERENCE);
+			prefs.remove(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE);
+		}
+		finally
+		{
+			prefs = null;
+			super.tearDown();
+		}
 	}
 
 	/**
@@ -111,14 +126,14 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 	 */
 	protected void setActiveUserAgents(String ids)
 	{
-		preferences.setValue(IPreferenceConstants.USER_AGENT_PREFERENCE, ids);
+		prefs.put(IPreferenceConstants.USER_AGENT_PREFERENCE, ids);
 	}
 
+	@Test
 	public void testNoFilterNoUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.NO_FILTER.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.NO_FILTER.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -138,11 +153,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testNoFilterOneUserAgentActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.NO_FILTER.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.NO_FILTER.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -162,11 +177,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testNoFilterTwoUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.NO_FILTER.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.NO_FILTER.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -186,11 +201,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testNoFilterThreeUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.NO_FILTER.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.NO_FILTER.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -210,11 +225,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testSomeFilterNoUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ONE_OR_MORE.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.NO_FILTER.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -234,11 +249,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testSomeFilterOneUserAgentActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ONE_OR_MORE.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.ONE_OR_MORE.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -257,11 +272,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testSomeFilterTwoUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ONE_OR_MORE.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.ONE_OR_MORE.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -280,11 +295,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testSomeFilterThreeUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ONE_OR_MORE.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.ONE_OR_MORE.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -303,11 +318,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testAllFilterNoUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ALL.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.ALL.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -327,11 +342,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testAllFilterOneUserAgentActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ALL.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.ALL.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -350,11 +365,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testAllFilterTwoUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ALL.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.ALL.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(
@@ -370,11 +385,11 @@ public class JSUserAgentFilteringTest extends JSEditorBasedTestCase
 		// @formatter:on
 	}
 
+	@Test
 	public void testAllFilterThreeUserAgentsActive()
 	{
 		// set filter preference
-		preferences.setValue(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE,
-				UserAgentFilterType.ALL.getText());
+		prefs.put(IPreferenceConstants.CONTENT_ASSIST_USER_AGENT_FILTER_TYPE, UserAgentFilterType.ALL.getText());
 
 		// @formatter:off
 		indexAndCheckProposals(

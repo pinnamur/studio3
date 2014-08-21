@@ -19,6 +19,8 @@ import com.aptana.core.util.CollectionsUtil;
 
 public class JSLanguageConstants
 {
+	public static final String GET = "get"; //$NON-NLS-1$
+	public static final String SET = "set"; //$NON-NLS-1$
 	public static final String TRUE = "true"; //$NON-NLS-1$
 	public static final String FALSE = "false"; //$NON-NLS-1$
 	public static final String THIS = "this"; //$NON-NLS-1$
@@ -95,6 +97,8 @@ public class JSLanguageConstants
 	public static final String FOR = "for"; //$NON-NLS-1$
 	public static final String IN = "in"; //$NON-NLS-1$
 	public static final String GREATER_GREATER_EQUAL = ">>="; //$NON-NLS-1$
+
+	public static final String REQUIRE = "require"; //$NON-NLS-1$
 
 	public static final String[] KEYWORD_OPERATORS = new String[] { DELETE, INSTANCEOF, IN, NEW, TYPEOF, WITH };
 	@SuppressWarnings("nls")

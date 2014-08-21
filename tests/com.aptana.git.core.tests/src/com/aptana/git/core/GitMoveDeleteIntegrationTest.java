@@ -7,6 +7,10 @@
  */
 package com.aptana.git.core;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.ByteArrayInputStream;
 import java.util.List;
 
@@ -17,7 +21,9 @@ import org.eclipse.core.resources.ProjectScope;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.junit.Test;
 import org.osgi.service.prefs.BackingStoreException;
 
 import com.aptana.git.core.model.ChangedFile;
@@ -34,7 +40,7 @@ public class GitMoveDeleteIntegrationTest extends GitTestCase
 	private IProject fProject;
 
 	@Override
-	protected void tearDown() throws Exception
+	public void tearDown() throws Exception
 	{
 		try
 		{
@@ -85,6 +91,7 @@ public class GitMoveDeleteIntegrationTest extends GitTestCase
 		return fProject;
 	}
 
+	@Test
 	public void testDeleteNewUnstagedFile() throws Exception
 	{
 		IFile file = getProject().getFile("newfile.txt");
@@ -95,6 +102,7 @@ public class GitMoveDeleteIntegrationTest extends GitTestCase
 		// TODO Assert that we didn't delete through repo
 	}
 
+	@Test
 	public void testDeleteStagedFile() throws Exception
 	{
 		IFile file = getProject().getFile("newfile2.txt");
@@ -116,7 +124,7 @@ public class GitMoveDeleteIntegrationTest extends GitTestCase
 		assertTrue("changed files was empty", changedFiles.size() > 0);
 		for (ChangedFile file : changedFiles)
 		{
-			if (file.getPath().equals(fileName))
+			if (file.getRelativePath().equals(Path.fromPortableString(fileName)))
 			{
 				return;
 			}
@@ -124,6 +132,7 @@ public class GitMoveDeleteIntegrationTest extends GitTestCase
 		fail("Didn't find " + fileName);
 	}
 
+	@Test
 	public void testDeleteAlreadyCommittedFileWithNoChanges() throws Exception
 	{
 		IFile file = getProject().getFile("newfile3.txt");
@@ -142,6 +151,7 @@ public class GitMoveDeleteIntegrationTest extends GitTestCase
 		// TODO Assert that we did delete through repo
 	}
 
+	@Test
 	public void testDeleteUnstagedAlreadyCommittedFile() throws Exception
 	{
 		IFile file = getProject().getFile("newfile4.txt");

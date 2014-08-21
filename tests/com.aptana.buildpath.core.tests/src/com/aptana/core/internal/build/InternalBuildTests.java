@@ -1,21 +1,12 @@
 package com.aptana.core.internal.build;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-public class InternalBuildTests extends TestCase
+@RunWith(Suite.class)
+@Suite.SuiteClasses({ BuildParticipantWorkingCopyTest.class, BuildParticipantManagerTest.class,
+		IndexBuildParticipantTest.class })
+public class InternalBuildTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(InternalBuildTests.class.getName());
-		// $JUnit-BEGIN$
-		suite.addTestSuite(BuildParticipantWorkingCopyTest.class);
-		suite.addTestSuite(BuildParticipantManagerTest.class);
-		suite.addTestSuite(IndexBuildParticipantTest.class);
-		// $JUnit-END$
-		return suite;
-	}
 
 }

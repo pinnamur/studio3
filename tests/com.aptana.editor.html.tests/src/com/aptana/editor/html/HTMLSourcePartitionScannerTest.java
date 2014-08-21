@@ -7,15 +7,14 @@
  */
 package com.aptana.editor.html;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IDocumentPartitioner;
+import org.junit.After;
+import org.junit.Test;
 
-import com.aptana.editor.common.ExtendedFastPartitioner;
-import com.aptana.editor.common.NullPartitionerSwitchStrategy;
-import com.aptana.editor.common.text.rules.CompositePartitionScanner;
-import com.aptana.editor.common.text.rules.NullSubPartitionScanner;
 import com.aptana.editor.css.CSSSourceConfiguration;
 import com.aptana.editor.js.JSSourceConfiguration;
 
@@ -23,10 +22,10 @@ import com.aptana.editor.js.JSSourceConfiguration;
  * @author Chris
  * @author Sandip
  */
-public class HTMLSourcePartitionScannerTest extends TestCase
+public class HTMLSourcePartitionScannerTest
 {
 
-	private ExtendedFastPartitioner partitioner;
+	private IDocumentPartitioner partitioner;
 
 	private void assertContentType(String contentType, String code, int offset)
 	{
@@ -34,32 +33,27 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 				getContentType(code, offset));
 	}
 
-	@Override
-	protected void tearDown() throws Exception
+	@After
+	public void tearDown() throws Exception
 	{
 		partitioner = null;
-		super.tearDown();
 	}
 
 	private String getContentType(String content, int offset)
 	{
 		if (partitioner == null)
 		{
+			// FIXME Call HTMLDocumentProvider.connect?
 			IDocument document = new Document(content);
-			CompositePartitionScanner partitionScanner = new CompositePartitionScanner(HTMLSourceConfiguration
-					.getDefault().createSubPartitionScanner(), new NullSubPartitionScanner(),
-					new NullPartitionerSwitchStrategy());
-			partitioner = new ExtendedFastPartitioner(partitionScanner, HTMLSourceConfiguration.getDefault()
-					.getContentTypes());
-			partitionScanner.setPartitioner(partitioner);
-			partitioner.connect(document);
-			document.setDocumentPartitioner(partitioner);
+			HTMLTestUtil.attachPartitioner(document);
+			partitioner = document.getDocumentPartitioner();
 		}
 		return partitioner.getContentType(offset);
 	}
 
 	// TODO Add tests for script/style/tag/cdata/doctype/default
 
+	@Test
 	public void testPartitioningOfCommentSpanningSingleLine()
 	{
 		String source = "<!-- This is HTML comment on one Line -->\n";
@@ -77,6 +71,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.DEFAULT, source, 41);
 	}
 
+	@Test
 	public void testPartitioningOfCommentSpanningMultipleLines()
 	{
 		String source = "<!-- This is HTML comment\nspanning multiple lines -->\n";
@@ -95,6 +90,15 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.DEFAULT, source, 53);
 	}
 
+	@Test
+	public void testLessThan()
+	{
+		String source = "<";
+
+		assertContentType(HTMLSourceConfiguration.HTML_TAG, source, 0);
+	}
+
+	@Test
 	public void testAllPartitionTypes()
 	{
 		String source = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">\n"
@@ -131,14 +135,11 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG_CLOSE, source, 222); // Text'<'/p>
 	}
 
+	@Test
 	public void testHTML5()
 	{
-		String source = "<!DOCTYPE html>\n"
-				+ "<HTML><HEAD>\n"
-				+ "<STYLE>html {color: red;}</STYLE>\n"
-				+ "<SCRIPT>var one = 1;</SCRIPT>\n"
-				+ "</HEAD><BODY>\n"
-				+ "</BODY></HTML>";
+		String source = "<!DOCTYPE html>\n" + "<HTML><HEAD>\n" + "<STYLE>html {color: red;}</STYLE>\n"
+				+ "<SCRIPT>var one = 1;</SCRIPT>\n" + "</HEAD><BODY>\n" + "</BODY></HTML>";
 		// DOCTYPE
 		assertContentType(HTMLSourceConfiguration.HTML_DOCTYPE, source, 0);
 		// html tag
@@ -161,6 +162,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG_CLOSE, source, 83); // '<'/script
 	}
 
+	@Test
 	public void testLowercaseDoctype()
 	{
 		String source = "<!doctype html>";
@@ -168,13 +170,15 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_DOCTYPE, source, 0);
 	}
 
+	@Test
 	public void testMixedcaseDoctype()
 	{
 		String source = "<!DoCtYpE html>";
 		// DOCTYPE
 		assertContentType(HTMLSourceConfiguration.HTML_DOCTYPE, source, 0);
 	}
-	
+
+	@Test
 	public void testIncompleteTag1()
 	{
 		String source = "<html> <";
@@ -184,6 +188,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG, source, 7);
 	}
 
+	@Test
 	public void testIncompleteTag2()
 	{
 		String source = "<html> </";
@@ -194,6 +199,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG_CLOSE, source, 8);
 	}
 
+	@Test
 	public void testIncompleteTag3()
 	{
 		String source = "<html> <>";
@@ -204,6 +210,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG, source, 8);
 	}
 
+	@Test
 	public void testIncompleteTag4()
 	{
 		String source = "<html> </>";
@@ -215,6 +222,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG_CLOSE, source, 9);
 	}
 
+	@Test
 	public void testIncompleteTag5()
 	{
 		String source = "<</html>";
@@ -223,6 +231,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG_CLOSE, source, 1);
 	}
 
+	@Test
 	public void testIncompleteTag6()
 	{
 		String source = "</<html>";
@@ -232,6 +241,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG, source, 2);
 	}
 
+	@Test
 	public void testIncompleteTag7()
 	{
 		String source = "<></html>";
@@ -241,6 +251,7 @@ public class HTMLSourcePartitionScannerTest extends TestCase
 		assertContentType(HTMLSourceConfiguration.HTML_TAG_CLOSE, source, 2);
 	}
 
+	@Test
 	public void testIncompleteTag8()
 	{
 		String source = "</><html>";

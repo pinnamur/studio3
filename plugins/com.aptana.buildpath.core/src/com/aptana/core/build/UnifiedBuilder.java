@@ -57,6 +57,7 @@ import com.aptana.index.core.IndexManager;
 import com.aptana.index.core.IndexPlugin;
 import com.aptana.index.core.build.BuildContext;
 import com.aptana.index.core.filter.IIndexFilterParticipant;
+import com.aptana.parsing.ParserPoolFactory;
 
 public class UnifiedBuilder extends IncrementalProjectBuilder
 {
@@ -102,6 +103,8 @@ public class UnifiedBuilder extends IncrementalProjectBuilder
 		SubMonitor sub = SubMonitor.convert(monitor, participants.size() + 2);
 		sub.worked(1);
 
+		ParserPoolFactory.getInstance().clearCache();
+
 		removeProblemsAndTasksFor(project);
 		sub.worked(1);
 
@@ -127,7 +130,15 @@ public class UnifiedBuilder extends IncrementalProjectBuilder
 				// Order is important here! If we check for enablement based on build type in prefs, the contributing
 				// plugin loads!
 				// FIXME is there any way to defer the second enablement check until after we do content type check?
-				return item != null && item.isEnabled(project) && item.isEnabled(BuildType.BUILD);
+				try
+				{
+					return item != null && item.isEnabled(project) && item.isEnabled(BuildType.BUILD);
+				}
+				catch (Exception e)
+				{
+					IdeLog.logWarning(BuildPathCorePlugin.getDefault(), e);
+					return false;
+				}
 			}
 		});
 	}

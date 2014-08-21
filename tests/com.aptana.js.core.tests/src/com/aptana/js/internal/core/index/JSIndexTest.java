@@ -7,6 +7,12 @@
  */
 package com.aptana.js.internal.core.index;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -14,17 +20,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.TestCase;
-
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Platform;
+import org.junit.After;
+import org.junit.Test;
 
 import com.aptana.core.CorePlugin;
 import com.aptana.core.IUserAgent;
 import com.aptana.core.IUserAgentManager;
+import com.aptana.core.util.CollectionsUtil;
 import com.aptana.core.util.IOUtil;
 import com.aptana.core.util.StringUtil;
 import com.aptana.index.core.Index;
@@ -39,13 +46,17 @@ import com.aptana.js.core.JSCorePlugin;
 import com.aptana.js.core.index.IJSIndexConstants;
 import com.aptana.js.core.index.JSFileIndexingParticipant;
 import com.aptana.js.core.index.JSIndexQueryHelper;
+import com.aptana.js.core.model.EventElement;
+import com.aptana.js.core.model.EventPropertyElement;
 import com.aptana.js.core.model.FunctionElement;
+import com.aptana.js.core.model.IHasPredefinedValues;
+import com.aptana.js.core.model.ParameterElement;
 import com.aptana.js.core.model.PropertyElement;
 import com.aptana.js.core.model.TypeElement;
 import com.aptana.js.core.model.UserAgentElement;
 import com.aptana.parsing.ast.IParseRootNode;
 
-public class JSIndexTest extends TestCase
+public class JSIndexTest
 {
 	private class TestBuildContext extends BuildContext
 	{
@@ -144,12 +155,13 @@ public class JSIndexTest extends TestCase
 	 * (non-Javadoc)
 	 * @see junit.framework.TestCase#tearDown()
 	 */
-	@Override
-	protected void tearDown() throws Exception
+	// @Override
+	@After
+	public void tearDown() throws Exception
 	{
 		getIndexManager().removeIndex(URI.create(IJSIndexConstants.METADATA_INDEX_LOCATION));
 
-		super.tearDown();
+		// super.tearDown();
 	}
 
 	/**
@@ -167,6 +179,7 @@ public class JSIndexTest extends TestCase
 	/**
 	 * Test for APSTUD-4289. Make sure we don't allow duplicate user agents into the JS index
 	 */
+	@Test
 	public void testDuplicateUserAgents()
 	{
 		// create property
@@ -207,6 +220,7 @@ public class JSIndexTest extends TestCase
 	/**
 	 * testMethod
 	 */
+	@Test
 	public void testMethod()
 	{
 		String typeName = "MyClass";
@@ -248,6 +262,7 @@ public class JSIndexTest extends TestCase
 	/**
 	 * testProperty
 	 */
+	@Test
 	public void testProperty()
 	{
 		String typeName = "MyClass";
@@ -282,6 +297,163 @@ public class JSIndexTest extends TestCase
 		assertEquals(propertyName, retrievedProperty.getName());
 	}
 
+	@Test
+	public void testPropertyWithConstantValues()
+	{
+		String typeName = "MyClass";
+		String propertyName = "myProperty";
+
+		// create type
+		TypeElement type = new TypeElement();
+		type.setName(typeName);
+
+		// create property within type
+		PropertyElement property = createProperty("name", propertyName, IHasPredefinedValues.CONSTANTS_PROPERTY,
+				CollectionsUtil.newList("Titanium.UI.FILL", "Titanium.UI.ALIGN"));
+		type.addProperty(property);
+
+		// write type to index
+		this.writeType(type);
+
+		// then retrieve it
+		List<TypeElement> retrievedTypes = this.getType(typeName);
+		TypeElement retrievedType = retrievedTypes.get(0);
+
+		assertNotNull(retrievedType);
+		assertEquals(typeName, retrievedType.getName());
+
+		// make sure we have one property
+		List<PropertyElement> properties = retrievedType.getProperties();
+		assertNotNull(properties);
+		assertEquals(1, properties.size());
+
+		// make sure the name is correct
+		PropertyElement retrievedProperty = properties.get(0);
+		assertEquals(propertyName, retrievedProperty.getName());
+		// Check constants
+		List<String> constants = retrievedProperty.getConstants();
+		assertEquals(2, constants.size());
+		assertTrue(constants.contains("Titanium.UI.FILL"));
+		assertTrue(constants.contains("Titanium.UI.ALIGN"));
+	}
+
+	private PropertyElement createProperty(Object... objects)
+	{
+		PropertyElement property = new PropertyElement();
+		Map<String, Object> map = CollectionsUtil.newTypedMap(String.class, Object.class, objects);
+		property.fromJSON(map);
+		return property;
+	}
+
+	@Test
+	public void testEventPropertyWithConstantValues()
+	{
+		String typeName = "MyClass";
+		String functionName = "convertUnits";
+		String paramName = "convertToUnits";
+		List<String> constants = CollectionsUtil.newList("Titanium.UI.UNIT_CM", "Titanium.UI.UNIT_MM",
+				"Titanium.UI.UNIT_DIP", "Titanium.UI.UNIT_IN", "Titanium.UI.UNIT_PX");
+
+		// create type
+		TypeElement type = new TypeElement();
+		type.setName(typeName);
+
+		// create function within type
+		FunctionElement function = new FunctionElement();
+		function.setName(functionName);
+
+		ParameterElement parameter = new ParameterElement();
+		parameter.setName(paramName);
+		parameter.fromJSON(CollectionsUtil.newTypedMap(String.class, Object.class,
+				IHasPredefinedValues.CONSTANTS_PROPERTY, constants));
+		function.addParameter(parameter);
+
+		type.addProperty(function);
+
+		// write type to index
+		this.writeType(type);
+
+		// then retrieve it
+		List<TypeElement> retrievedTypes = this.getType(typeName);
+		TypeElement retrievedType = retrievedTypes.get(0);
+
+		assertNotNull(retrievedType);
+		assertEquals(typeName, retrievedType.getName());
+
+		// make sure we have one property
+		List<PropertyElement> properties = retrievedType.getProperties();
+		assertNotNull(properties);
+		assertEquals(1, properties.size());
+
+		// make sure the name is correct
+		PropertyElement retrievedProperty = properties.get(0);
+		assertEquals(functionName, retrievedProperty.getName());
+		assertTrue(retrievedProperty instanceof FunctionElement);
+		FunctionElement retrievedFunction = (FunctionElement) retrievedProperty;
+		List<ParameterElement> retrievedParams = retrievedFunction.getParameters();
+		assertNotNull(retrievedParams);
+		assertEquals(1, retrievedParams.size());
+
+		ParameterElement retrievedParam = retrievedParams.get(0);
+
+		// Check constants
+		List<String> retrievedConstants = retrievedParam.getConstants();
+		assertEquals(constants.size(), retrievedConstants.size());
+		for (String constant : constants)
+		{
+			assertTrue(retrievedConstants.contains(constant));
+		}
+	}
+
+	@Test
+	public void testFunctionParameterWithConstantValues()
+	{
+		String typeName = "MyClass";
+		String eventName = "event";
+		String propertyName = "eventProperty";
+
+		// create type
+		TypeElement type = new TypeElement();
+		type.setName(typeName);
+
+		EventElement ee = new EventElement();
+		ee.setName(eventName);
+		EventPropertyElement epe = new EventPropertyElement();
+		epe.fromJSON(CollectionsUtil.newTypedMap(String.class, Object.class, IHasPredefinedValues.CONSTANTS_PROPERTY,
+				CollectionsUtil.newList("Titanium.UI.FILL", "Titanium.UI.ALIGN")));
+		epe.setName(propertyName);
+		ee.addProperty(epe);
+
+		type.addEvent(ee);
+
+		// write type to index
+		this.writeType(type);
+
+		// then retrieve it
+		List<TypeElement> retrievedTypes = this.getType(typeName);
+		TypeElement retrievedType = retrievedTypes.get(0);
+
+		assertNotNull(retrievedType);
+		assertEquals(typeName, retrievedType.getName());
+
+		EventElement retrievedEvent = retrievedType.getEvent(eventName);
+		assertNotNull(retrievedEvent);
+
+		List<EventPropertyElement> retrievedProps = retrievedEvent.getProperties();
+		assertNotNull(retrievedProps);
+		assertEquals(1, retrievedProps.size());
+
+		// make sure the name is correct
+		EventPropertyElement retrievedProperty = retrievedProps.get(0);
+		assertEquals(propertyName, retrievedProperty.getName());
+		// Check constants
+		List<String> constants = retrievedProperty.getConstants();
+		assertEquals(2, constants.size());
+		assertTrue(constants.contains("Titanium.UI.FILL"));
+		assertTrue(constants.contains("Titanium.UI.ALIGN"));
+	}
+
+	@Test
 	public void testSpecialAllUserAgentFlag()
 	{
 		// create property and use all user agents
@@ -332,6 +504,7 @@ public class JSIndexTest extends TestCase
 	/**
 	 * testType
 	 */
+	@Test
 	public void testType()
 	{
 		String typeName = "MyClass";
@@ -350,6 +523,7 @@ public class JSIndexTest extends TestCase
 	/**
 	 * Test for APSTUD-4535
 	 */
+	@Test
 	public void testTypeCaching()
 	{
 		TestBuildContext myContext = new TestBuildContext("indexing/dottedTypes.js");
@@ -386,6 +560,7 @@ public class JSIndexTest extends TestCase
 	/**
 	 * APSTUD-4117
 	 */
+	@Test
 	public void testFunctionDocumentationWithoutReturnTag()
 	{
 		TestBuildContext myContext = new TestBuildContext("indexing/functionDocsWithoutReturn.js");
@@ -421,7 +596,8 @@ public class JSIndexTest extends TestCase
 	/**
 	 * APSTUD-4116
 	 */
-	public void testFunctionDocumenationWithoutParamTag()
+	@Test
+	public void testFunctionDocumentationWithoutParamTag()
 	{
 		TestBuildContext myContext = new TestBuildContext("indexing/functionDocsWithoutParam.js");
 
@@ -449,6 +625,26 @@ public class JSIndexTest extends TestCase
 			assertEquals("Expected parameter 1's name to be 'a'", "a", parameters.get(0));
 			assertEquals("Expected parameter 2's name to be 'b'", "b", parameters.get(1));
 			assertEquals("Expected parameter 3's name to be 'c'", "c", parameters.get(2));
+		}
+		catch (CoreException e)
+		{
+			fail(e.getMessage());
+		}
+	}
+
+	@Test(timeout = 30000)
+	public void testTISTUD_6113()
+	{
+		TestBuildContext myContext = new TestBuildContext("indexing/d3.v3.min.js");
+
+		try
+		{
+			IParseRootNode ast = myContext.getAST();
+			JSFileIndexingParticipant indexParticipant = new JSFileIndexingParticipant();
+			Index index = getIndex();
+
+			indexParticipant.processParseResults(myContext, index, ast, new NullProgressMonitor());
+			assertTrue(true); // Can we parse/index it without hanging?
 		}
 		catch (CoreException e)
 		{

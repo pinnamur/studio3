@@ -1,20 +1,13 @@
 package com.aptana.jira.core.tests;
 
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
+
 import com.aptana.jira.core.JiraManagerTest;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-
-public class AllJiraCoreTests extends TestCase
+@RunWith(Suite.class)
+@SuiteClasses({ JiraManagerTest.class, })
+public class AllJiraCoreTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(AllJiraCoreTests.class.getName());
-		// $JUnit-BEGIN$
-		suite.addTestSuite(JiraManagerTest.class);
-		// $JUnit-END$
-		return suite;
-	}
 }

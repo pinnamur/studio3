@@ -8,6 +8,8 @@
 package com.aptana.index.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +22,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 
+import com.aptana.core.IMap;
 import com.aptana.core.logging.IdeLog;
 import com.aptana.core.util.ArrayUtil;
 import com.aptana.core.util.CollectionsUtil;
@@ -45,36 +48,72 @@ public class IndexUtil
 	{
 		List<T> result = null;
 
-		if (itemClass != null && object != null && object.getClass().isArray())
+		if (itemClass != null && object != null)
 		{
-			Object[] objects = (Object[]) object;
-
-			if (objects.length > 0)
+			if (object.getClass().isArray())
 			{
-				result = new ArrayList<T>();
+				Object[] objects = (Object[]) object;
 
-				// Wrap loop because if newInstance fails once, it will fail for all iterations
-				try
+				if (objects.length > 0)
 				{
-					for (Object value : (Object[]) object)
+					result = new ArrayList<T>(objects.length);
+
+					// Wrap loop because if newInstance fails once, it will fail for all iterations
+					try
 					{
-						if (value instanceof Map)
+						for (Object value : objects)
 						{
-							T v = itemClass.newInstance();
+							if (value instanceof Map)
+							{
+								T v = itemClass.newInstance();
 
-							v.fromJSON((Map) value);
+								v.fromJSON((Map) value);
 
-							result.add(v);
+								result.add(v);
+							}
 						}
 					}
+					catch (InstantiationException e)
+					{
+						IdeLog.logError(IndexPlugin.getDefault(), e);
+					}
+					catch (IllegalAccessException e)
+					{
+						IdeLog.logError(IndexPlugin.getDefault(), e);
+					}
 				}
-				catch (InstantiationException e)
+			}
+			else if (object instanceof List)
+			{
+				List objects = (List) object;
+
+				if (objects.size() > 0)
 				{
-					IdeLog.logError(IndexPlugin.getDefault(), e);
-				}
-				catch (IllegalAccessException e)
-				{
-					IdeLog.logError(IndexPlugin.getDefault(), e);
+					result = new ArrayList<T>();
+
+					// Wrap loop because if newInstance fails once, it will fail for all iterations
+					try
+					{
+						for (Object value : objects)
+						{
+							if (value instanceof Map)
+							{
+								T v = itemClass.newInstance();
+
+								v.fromJSON((Map) value);
+
+								result.add(v);
+							}
+						}
+					}
+					catch (InstantiationException e)
+					{
+						IdeLog.logError(IndexPlugin.getDefault(), e);
+					}
+					catch (IllegalAccessException e)
+					{
+						IdeLog.logError(IndexPlugin.getDefault(), e);
+					}
 				}
 			}
 		}
@@ -90,25 +129,34 @@ public class IndexUtil
 	 * @param list
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	public static List<String> createList(Object object)
 	{
 		List<String> result = null;
-
-		if (object != null && object.getClass().isArray())
+		if (object != null)
 		{
-			Object[] objects = (Object[]) object;
-
-			if (objects.length > 0)
+			Collection<Object> objects = null;
+			if (object.getClass().isArray())
 			{
-				result = new ArrayList<String>();
+				objects = Arrays.asList((Object[]) object);
+			}
+			else if (object instanceof Collection)
+			{
+				objects = (Collection<Object>) object;
+			}
 
-				for (Object value : (Object[]) object)
+			if (!CollectionsUtil.isEmpty(objects))
+			{
+				return CollectionsUtil.map(objects, new IMap<Object, String>()
 				{
-					result.add(value.toString());
-				}
+					@Override
+					public String map(Object item)
+					{
+						return item.toString();
+					}
+				});
 			}
 		}
-
 		return result;
 	}
 

@@ -26,7 +26,6 @@ public class TypeElement extends BaseElement
 	private static final String EVENTS_PROPERTY = "events"; //$NON-NLS-1$
 	private static final String EXAMPLES_PROPERTY = "examples"; //$NON-NLS-1$
 	private static final String REMARKS_PROPERTY = "remarks"; //$NON-NLS-1$
-	private static final String DEPRECATED_PROPERTY = "deprecated"; //$NON-NLS-1$
 	private static final String IS_INTERNAL_PROPERTY = "internal"; //$NON-NLS-1$
 
 	private List<String> _parentTypes;
@@ -34,7 +33,6 @@ public class TypeElement extends BaseElement
 	private List<EventElement> _events;
 	private List<String> _examples;
 	private List<String> _remarks;
-	private boolean _deprecated;
 	private boolean _serializeProperties;
 	private boolean _isInternal;
 
@@ -99,7 +97,11 @@ public class TypeElement extends BaseElement
 
 			if (!this._parentTypes.contains(type))
 			{
-				this._parentTypes.add(type);
+				// Don't allow adding self as parent!
+				if (!type.equals(getName()))
+				{
+					this._parentTypes.add(type);
+				}
 			}
 		}
 	}
@@ -157,56 +159,73 @@ public class TypeElement extends BaseElement
 		{
 			List<PropertyElement> properties = IndexUtil.createList(object.get(PROPERTIES_PROPERTY),
 					PropertyElement.class);
-
-			for (PropertyElement property : properties)
+			if (!CollectionsUtil.isEmpty(properties))
 			{
-				this.addProperty(property);
+				for (PropertyElement property : properties)
+				{
+					this.addProperty(property);
+				}
 			}
 		}
 
 		if (object.containsKey(FUNCTIONS_PROPERTY))
 		{
-			List<PropertyElement> functions = IndexUtil.createList(object.get(FUNCTIONS_PROPERTY),
-					PropertyElement.class);
-
-			for (PropertyElement function : functions)
+			List<FunctionElement> functions = IndexUtil.createList(object.get(FUNCTIONS_PROPERTY),
+					FunctionElement.class);
+			if (!CollectionsUtil.isEmpty(functions))
 			{
-				this.addProperty(function);
+				for (FunctionElement function : functions)
+				{
+					this.addProperty(function);
+				}
 			}
 		}
 
 		if (object.containsKey(EVENTS_PROPERTY))
 		{
 			List<EventElement> events = IndexUtil.createList(object.get(EVENTS_PROPERTY), EventElement.class);
-
-			for (EventElement event : events)
+			if (!CollectionsUtil.isEmpty(events))
 			{
-				this.addEvent(event);
+				for (EventElement event : events)
+				{
+					this.addEvent(event);
+				}
 			}
 		}
 
 		if (object.containsKey(EXAMPLES_PROPERTY))
 		{
 			List<String> examples = IndexUtil.createList(object.get(EXAMPLES_PROPERTY));
-
-			for (String example : examples)
+			if (!CollectionsUtil.isEmpty(examples))
 			{
-				this.addExample(example);
+				for (String example : examples)
+				{
+					this.addExample(example);
+				}
 			}
 		}
 
 		if (object.containsKey(REMARKS_PROPERTY))
 		{
 			List<String> remarks = IndexUtil.createList(object.get(REMARKS_PROPERTY));
-
-			for (String remark : remarks)
+			if (!CollectionsUtil.isEmpty(remarks))
 			{
-				this.addRemark(remark);
+				for (String remark : remarks)
+				{
+					this.addRemark(remark);
+				}
 			}
 		}
 
-		this.setIsDeprecated(Boolean.TRUE == object.get(DEPRECATED_PROPERTY)); // $codepro.audit.disable useEquals
-		this.setIsInternal(Boolean.TRUE == object.get(IS_INTERNAL_PROPERTY)); // $codepro.audit.disable useEquals
+		// JSCA holds "isInternal", but we serialize as "internal"
+		if (object.containsKey("isInternal")) //$NON-NLS-1$
+		{
+			this.setIsInternal(Boolean.TRUE == object.get("isInternal")); //$NON-NLS-1$ // $codepro.audit.disable useEquals
+		}
+		else
+		{
+			this.setIsInternal(Boolean.TRUE == object.get(IS_INTERNAL_PROPERTY)); // $codepro.audit.disable useEquals
+		}
 	}
 
 	/**
@@ -382,16 +401,6 @@ public class TypeElement extends BaseElement
 	}
 
 	/**
-	 * isDeprecated
-	 * 
-	 * @return
-	 */
-	public boolean isDeprecated()
-	{
-		return this._deprecated;
-	}
-
-	/**
 	 * removeProperty
 	 * 
 	 * @param property
@@ -406,16 +415,6 @@ public class TypeElement extends BaseElement
 		}
 
 		return result;
-	}
-
-	/**
-	 * setIsDeprecated
-	 * 
-	 * @param value
-	 */
-	public void setIsDeprecated(boolean value)
-	{
-		this._deprecated = value;
 	}
 
 	/**
@@ -468,7 +467,6 @@ public class TypeElement extends BaseElement
 			out.add(EVENTS_PROPERTY, this.getEvents());
 			out.add(EXAMPLES_PROPERTY, this.getExamples());
 			out.add(REMARKS_PROPERTY, this.getRemarks());
-			out.add(DEPRECATED_PROPERTY, this.isDeprecated());
 			out.add(IS_INTERNAL_PROPERTY, this.isInternal());
 		}
 	}

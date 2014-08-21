@@ -7,6 +7,8 @@
  */
 package com.aptana.js.core.node;
 
+import java.io.FileFilter;
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
@@ -87,13 +89,36 @@ public interface INodePackageManager
 	 */
 	public IPath getModulesPath(String packageName) throws CoreException;
 
+	/**
+	 * Gets the latest installed version of a package.
+	 * 
+	 * @param packageName
+	 * @return
+	 * @throws CoreException
+	 */
 	public String getInstalledVersion(String packageName) throws CoreException;
 
 	public String getInstalledVersion(String packageName, boolean isGlobal, IPath workingDir) throws CoreException;
 
+	/**
+	 * Gets the latest version published for a package. Note that there may be "newer" RC/beta/alphas, but the NPM
+	 * "latest" pointer may not refer to them.
+	 * 
+	 * @param packageName
+	 * @return
+	 * @throws CoreException
+	 */
 	public String getLatestVersionAvailable(String packageName) throws CoreException;
 
-	public IPath findNPM();
+	/**
+	 * Gets the full list of published versions for a given package. NEVER RETURNS NULL! if anything goes wrong, we'll
+	 * throw a CoreException.
+	 * 
+	 * @param packageName
+	 * @return
+	 * @throws CoreException
+	 */
+	public List<String> getAvailableVersions(String packageName) throws CoreException;
 
 	public String getConfigValue(String key) throws CoreException;
 
@@ -128,9 +153,68 @@ public interface INodePackageManager
 	 * 
 	 * @param monitor
 	 * @return
+	 * @throws CoreException
 	 */
-	public IStatus cleanNpmCache(IProgressMonitor monitor);
+	public IStatus cleanNpmCache(char[] password, boolean runWithSudo, IProgressMonitor monitor);
 
-	// TODO Uninstall
+	/**
+	 * Uninstalls an npm package.
+	 * 
+	 * @param packageName
+	 * @param displayName
+	 * @param global
+	 * @param password
+	 * @param monitor
+	 * @return
+	 * @throws CoreException
+	 */
+	public IStatus uninstall(String packageName, String displayName, boolean global, char[] password,
+			IProgressMonitor monitor) throws CoreException;
+
+	/**
+	 * Does the NPM path/install we're pointing to exist?
+	 * 
+	 * @return
+	 */
+	public boolean exists();
+
+	/**
+	 * The path to the NPM binary script. This may return null if we were unable to find npm!
+	 * 
+	 * @return
+	 */
+	public IPath getPath();
+
+	/**
+	 * return the version of NPM.
+	 * 
+	 * @return
+	 * @throws CoreException
+	 *             if NPM isn't actually installed, or grabbing the version failed.
+	 */
+	public String getVersion() throws CoreException;
+
+	/**
+	 * A way to generically launch commands under NPM. Use sparingly. Ideally we'd have methods to invoke whatever
+	 * command you're hacking by using this.
+	 * 
+	 * @param args
+	 * @return
+	 * @throws CoreException
+	 *             May throw a CoreException to indicate that the NPM path is bad.
+	 */
+	public IStatus runInBackground(String... args) throws CoreException;
+
+	/**
+	 * Search for the npm package installed locally based on the search locations.
+	 * 
+	 * @param executableName
+	 * @param appendExtension
+	 * @param searchLocations
+	 * @param fileFilter
+	 * @return
+	 */
+	public IPath findNpmPackagePath(String executableName, boolean appendExtension, List<IPath> searchLocations,
+			FileFilter fileFilter);
 	// TODO Update
 }

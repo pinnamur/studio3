@@ -7,6 +7,12 @@
  */
 package com.aptana.scripting.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,6 +23,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Before;
+import org.junit.Test;
+
+import com.aptana.core.util.CollectionsUtil;
 import com.aptana.scripting.ScriptLogListener;
 import com.aptana.scripting.model.filters.IModelFilter;
 
@@ -185,19 +195,16 @@ public class BundleTests extends BundleTestBase
 		assertEquals(command1, commands.get(0).getInvoke());
 	}
 
-	/**
-	 * setUp
-	 */
-	protected void setUp() throws Exception
+	@Before
+	public void setUp() throws Exception
 	{
-		super.setUp();
-
 		deadlocked = false;
 	}
 
 	/**
 	 * testLoadLoneBundle
 	 */
+	@Test
 	public void testLoadLoneBundle()
 	{
 		String bundleName = "loneBundle";
@@ -210,6 +217,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testLoadBundleWithCommand
 	 */
+	@Test
 	public void testLoadBundleWithCommand()
 	{
 		String bundleName = "bundleWithCommand";
@@ -223,6 +231,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testLoadBundleWithMenu
 	 */
+	@Test
 	public void testLoadBundleWithMenu()
 	{
 		String bundleName = "bundleWithMenu";
@@ -236,6 +245,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testLoadBundleWithSnippet
 	 */
+	@Test
 	public void testLoadBundleWithSnippet()
 	{
 		String bundleName = "bundleWithSnippet";
@@ -254,6 +264,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testLoadBundleWithSnippetUsingFilter
 	 */
+	@Test
 	public void testLoadBundleWithSnippetUsingFilter()
 	{
 		String bundleName = "bundleWithSnippet";
@@ -274,19 +285,22 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testLoadBundleWithSnippetUsingFilter
 	 */
+	@Test
 	public void testLoadBundleWithSnippetUsingNullFilter()
 	{
 		String bundleName = "bundleWithSnippet";
+		int origSize = CollectionsUtil.size(getBundleManagerInstance().getSnippets(null));
 		BundleEntry entry = this.getBundleEntry(bundleName, BundlePrecedence.APPLICATION);
 		List<SnippetElement> snippets = getBundleManagerInstance().getSnippets(null);
 
 		assertNotNull(snippets);
-		assertEquals(1, snippets.size());
+		assertEquals(origSize + 1, snippets.size());
 	}
 
 	/**
 	 * testUserOverridesApplication
 	 */
+	@Test
 	public void testUserOverridesApplication()
 	{
 		compareScopedBundles("bundleWithCommand", BundlePrecedence.APPLICATION, BundlePrecedence.USER, "cd", "cd ..");
@@ -295,6 +309,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testUserOverridesApplication2
 	 */
+	@Test
 	public void testUserOverridesApplication2()
 	{
 		this.compareScopedBundles("bundleWithCommand", BundlePrecedence.USER, BundlePrecedence.APPLICATION, "cd ..",
@@ -304,6 +319,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testUserOverridesApplication
 	 */
+	@Test
 	public void testProjectOverridesApplication()
 	{
 		this.compareScopedBundles("bundleWithCommand", BundlePrecedence.APPLICATION, BundlePrecedence.PROJECT, "cd",
@@ -313,6 +329,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testUserOverridesApplication2
 	 */
+	@Test
 	public void testProjectOverridesApplication2()
 	{
 		this.compareScopedBundles("bundleWithCommand", BundlePrecedence.PROJECT, BundlePrecedence.APPLICATION, "cd /",
@@ -322,6 +339,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testUserOverridesApplication
 	 */
+	@Test
 	public void testProjectOverridesUser()
 	{
 		this.compareScopedBundles("bundleWithCommand", BundlePrecedence.USER, BundlePrecedence.PROJECT, "cd ..", "cd /");
@@ -330,6 +348,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testUserOverridesApplication2
 	 */
+	@Test
 	public void testProjectOverridesUser2()
 	{
 		this.compareScopedBundles("bundleWithCommand", BundlePrecedence.PROJECT, BundlePrecedence.USER, "cd /", "cd /");
@@ -338,6 +357,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testApplicationOverrideAndDelete
 	 */
+	@Test
 	public void testApplicationOverrideAndDelete()
 	{
 		this.compareScopedBundlesWithDelete("bundleWithCommand", BundlePrecedence.APPLICATION, BundlePrecedence.USER,
@@ -347,6 +367,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testApplicationOverrideAndDelete
 	 */
+	@Test
 	public void testApplicationOverrideAndDelete2()
 	{
 		this.compareScopedBundlesWithDelete("bundleWithCommand", BundlePrecedence.APPLICATION,
@@ -356,6 +377,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testUserOverridesApplication
 	 */
+	@Test
 	public void testUserOverrideAndDelete()
 	{
 		this.compareScopedBundlesWithDelete("bundleWithCommand", BundlePrecedence.USER, BundlePrecedence.PROJECT,
@@ -365,6 +387,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testSamePrecedenceOverride
 	 */
+	@Test
 	public void testSamePrecedenceOverride()
 	{
 		// confirm first bundle loaded properly
@@ -385,6 +408,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testSamePrecedenceOverride2
 	 */
+	@Test
 	public void testSamePrecedenceOverride2()
 	{
 		// confirm first bundle loaded properly
@@ -407,6 +431,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testSamePrecedenceAugmentation
 	 */
+	@Test
 	public void testSamePrecedenceAugmentation()
 	{
 		// confirm first bundle loaded properly
@@ -441,7 +466,7 @@ public class BundleTests extends BundleTestBase
 	 * testBundleInCommandsDirectory
 	 */
 	// FIXME not working ATM
-	// public void testBundleInCommandsDirectory()
+	// @Test public void testBundleInCommandsDirectory()
 	// {
 	// LogListener listener = new LogListener();
 	// ScriptLogger.getInstance().addLogListener(listener);
@@ -455,6 +480,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testBundleFileInCommandsDirectory
 	 */
+	@Test
 	public void testBundleFileInCommandsDirectory()
 	{
 		// LogListener listener = new LogListener();
@@ -469,6 +495,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testNameFromBundleDirectory
 	 */
+	@Test
 	public void testNameFromBundleDirectory()
 	{
 		// load bundle
@@ -483,6 +510,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testNameFromBundleDirectoryWithExtension
 	 */
+	@Test
 	public void testNameFromBundleDirectoryWithExtension()
 	{
 		// load bundle
@@ -496,6 +524,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testBundleIsBundleDeclaration
 	 */
+	@Test
 	public void testBundleIsBundleDeclaration()
 	{
 		String bundleName = "bundleDefinition";
@@ -513,6 +542,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testBundleIsBundleDeclaration2
 	 */
+	@Test
 	public void testBundleIsBundleDeclaration2()
 	{
 		String bundleName = "bundleDefinition2";
@@ -530,6 +560,7 @@ public class BundleTests extends BundleTestBase
 	/**
 	 * testBundleIsBundleReference
 	 */
+	@Test
 	public void testBundleIsBundleReference()
 	{
 		this.loadBundleEntry("bundleReference", BundlePrecedence.PROJECT);
@@ -543,6 +574,7 @@ public class BundleTests extends BundleTestBase
 		assertTrue(bundles.get(0).isReference());
 	}
 
+	@Test
 	public void testReferenceLoadingAcrossPrecendenceBounds()
 	{
 		this.loadBundleEntry("bundleWithCommand", BundlePrecedence.APPLICATION);
@@ -561,6 +593,7 @@ public class BundleTests extends BundleTestBase
 		assertEquals(3, commands.size());
 	}
 
+	@Test
 	public void testDeadlock() throws InterruptedException
 	{
 		// Launch a lot of threads contending for bundle manager collections
@@ -587,7 +620,7 @@ public class BundleTests extends BundleTestBase
 	}
 
 	@Override
-	protected void tearDown() throws Exception
+	public void tearDown() throws Exception
 	{
 		if (deadlocked)
 		{

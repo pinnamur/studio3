@@ -7,13 +7,14 @@
  */
 package com.aptana.index.core.build;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
 import junit.framework.TestCase;
 
 import org.eclipse.core.runtime.CoreException;
 
 import beaver.Symbol;
 
-import com.aptana.core.build.IProblem.Severity;
 import com.aptana.parsing.IParseState;
 import com.aptana.parsing.ParseResult;
 import com.aptana.parsing.ParseState;
@@ -25,9 +26,10 @@ import com.aptana.parsing.ast.ParseRootNode;
 /**
  * @author Fabio
  */
-public class BuildContextTest extends TestCase
+public class BuildContextTest
 {
 
+	@Test
 	public void testBuildContext() throws Exception
 	{
 		final int[] reparses = new int[] { 0 };
@@ -52,7 +54,7 @@ public class BuildContextTest extends TestCase
 					throws Exception
 			{
 				reparses[0] += 1;
-				working.addError(new ParseError("language", new Symbol(1), Severity.ERROR));
+				working.addError(new ParseError("language", new Symbol(1), null));
 				working.setParseResult(parseRootNode);
 				return working.getImmutableResult();
 			}

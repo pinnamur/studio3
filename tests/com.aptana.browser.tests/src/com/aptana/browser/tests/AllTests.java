@@ -7,21 +7,14 @@
  */
 package com.aptana.browser.tests;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 import com.aptana.browser.internal.BrowserConfigurationManagerTest;
 
-public class AllTests extends TestCase
+@RunWith(Suite.class)
+@Suite.SuiteClasses({ BrowserConfigurationManagerTest.class })
+public class AllTests
 {
 
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(AllTests.class.getName());
-		// $JUnit-BEGIN$
-		suite.addTestSuite(BrowserConfigurationManagerTest.class);
-		// $JUnit-END$
-		return suite;
-	}
 }

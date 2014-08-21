@@ -24,8 +24,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.IScopeContext;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.text.TextAttribute;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
@@ -500,7 +502,7 @@ public class Theme
 		}
 		// Only save to defaults if it has never been saved there. Basically take a snapshot of first version and
 		// use that as the "default"
-		IEclipsePreferences prefs = EclipseUtil.defaultScope().getNode(ThemePlugin.PLUGIN_ID);
+		IEclipsePreferences prefs = DefaultScope.INSTANCE.getNode(ThemePlugin.PLUGIN_ID);
 		if (prefs == null)
 		{
 			return; // TODO Log something?
@@ -513,13 +515,13 @@ public class Theme
 		String value = preferences.get(getName(), null);
 		if (value == null)
 		{
-			save(EclipseUtil.defaultScope());
+			save(DefaultScope.INSTANCE);
 		}
 	}
 
 	public void save()
 	{
-		save(EclipseUtil.instanceScope());
+		save(InstanceScope.INSTANCE);
 		if (getThemeManager().getCurrentTheme().equals(this))
 		{
 			getThemeManager().setCurrentTheme(this);
@@ -573,7 +575,7 @@ public class Theme
 		}
 		else
 		{
-			IEclipsePreferences prefs = EclipseUtil.defaultScope().getNode(ThemePlugin.PLUGIN_ID);
+			IEclipsePreferences prefs = DefaultScope.INSTANCE.getNode(ThemePlugin.PLUGIN_ID);
 			Preferences preferences = prefs.node(ThemeManager.THEMES_NODE);
 			ByteArrayInputStream byteStream = null;
 			try
@@ -601,7 +603,7 @@ public class Theme
 					xmlStream = new ByteArrayInputStream(xml.getBytes(IOUtil.UTF_8));
 					props = new OrderedProperties();
 					props.loadFromXML(xmlStream);
-					save(EclipseUtil.defaultScope());
+					save(DefaultScope.INSTANCE);
 				}
 				finally
 				{
@@ -644,12 +646,12 @@ public class Theme
 	 */
 	private void deleteCustomVersion()
 	{
-		delete(EclipseUtil.instanceScope());
+		delete(InstanceScope.INSTANCE);
 	}
 
 	private void deleteDefaultVersion()
 	{
-		delete(EclipseUtil.defaultScope());
+		delete(DefaultScope.INSTANCE);
 	}
 
 	private void delete(IScopeContext context)
@@ -882,7 +884,7 @@ public class Theme
 		return searchResultBG;
 	}
 
-	RGB lighten(RGB color)
+	public RGB lighten(RGB color)
 	{
 		return lighten(color, (float) 0.15);
 	}
@@ -893,7 +895,7 @@ public class Theme
 		return new RGB(hsb[0], hsb[1], Math.min(1, hsb[2] + amount));
 	}
 
-	RGB darken(RGB color)
+	public RGB darken(RGB color)
 	{
 		return darken(color, (float) 0.15);
 	}
@@ -946,17 +948,6 @@ public class Theme
 		coloringRules.remove(entry);
 		wipeCache();
 		save();
-	}
-
-	/**
-	 * Does the user have invasive themes turned on?
-	 * 
-	 * @deprecated Use {@link ThemePlugin#applyToViews()}
-	 * @return
-	 */
-	public boolean isInvasive()
-	{
-		return ThemePlugin.applyToViews();
 	}
 
 	public Color getForegroundColor()

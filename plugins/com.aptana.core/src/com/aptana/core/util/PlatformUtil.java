@@ -23,11 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.osgi.service.environment.Constants;
 
 import com.aptana.core.CorePlugin;
-import com.aptana.core.internal.platform.CoreMacOSX;
 import com.aptana.core.internal.platform.CoreNatives;
 import com.aptana.core.logging.IdeLog;
 
@@ -485,7 +486,7 @@ public final class PlatformUtil
 	 */
 	public static synchronized String expandEnvironmentStrings(String path)
 	{
-		if (Platform.OS_WIN32.equals(Platform.getOS()))
+		if (isWindows())
 		{
 			String expanded = CoreNatives.ExpandEnvironmentStrings(path);
 			if (expanded != null)
@@ -517,23 +518,17 @@ public final class PlatformUtil
 				}
 			}
 		}
-		else if (Platform.OS_MACOSX.equals(Platform.getOS()))
+		else if (isMac())
 		{
+			// Here, we cheat and assume that the directories live underneath the user home
+			// Otherwise I get weird perf/lockup issues trying to access CoreMacOSX.FileManager_findFolder
 			if (path.startsWith(DESKTOP_DIRECTORY))
 			{
-				String desktopDirectory = CoreMacOSX.FileManager_findFolder(true, CoreMacOSX.kDesktopFolderType);
-				if (desktopDirectory != null)
-				{
-					path = desktopDirectory + path.substring(DESKTOP_DIRECTORY.length());
-				}
+				return expandEnvironmentStrings("~/Desktop" + path.substring(DESKTOP_DIRECTORY.length()));
 			}
 			else if (path.startsWith(DOCUMENTS_DIRECTORY))
 			{
-				String docsDirectory = CoreMacOSX.FileManager_findFolder(true, CoreMacOSX.kDocumentsFolderType);
-				if (docsDirectory != null)
-				{
-					path = docsDirectory + path.substring(DOCUMENTS_DIRECTORY.length());
-				}
+				return expandEnvironmentStrings("~/Documents" + path.substring(DOCUMENTS_DIRECTORY.length()));
 			}
 		}
 		if (path.length() > 0 && path.charAt(0) == '~')
@@ -548,30 +543,17 @@ public final class PlatformUtil
 	}
 
 	/**
-	 * queryRegestryStringValue
+	 * queryRegistryStringValue
 	 * 
 	 * @param keyName
 	 * @param valueName
-	 * @return value of regestry key
+	 * @return value of registry key
 	 */
-	public static String queryRegestryStringValue(String keyName, String valueName)
+	public static String queryRegistryStringValue(String keyName, String valueName)
 	{
 		if (Platform.OS_WIN32.equals(Platform.getOS()))
 		{
-			long hRootKey;
-			if (keyName.startsWith("HKCR\\") || keyName.startsWith("HKEY_CLASSES_ROOT\\")) { //$NON-NLS-1$ //$NON-NLS-2$
-				hRootKey = CoreNatives.HKEY_CLASSES_ROOT;
-			}
-			else if (keyName.startsWith("HKLM\\") || keyName.startsWith("HKEY_LOCAL_MACHINE\\")) { //$NON-NLS-1$ //$NON-NLS-2$
-				hRootKey = CoreNatives.HKEY_LOCAL_MACHINE;
-			}
-			else if (keyName.startsWith("HKCU\\") || keyName.startsWith("HKEY_CURRENT_USER\\")) { //$NON-NLS-1$ //$NON-NLS-2$
-				hRootKey = CoreNatives.HKEY_CURRENT_USER;
-			}
-			else
-			{
-				throw new IllegalArgumentException("Invalid regestry key name"); //$NON-NLS-1$
-			}
+			long hRootKey = getRootKey(keyName);
 			keyName = keyName.substring(keyName.indexOf('\\') + 1);
 			long[] hKey = new long[1];
 			if (CoreNatives.RegOpenKey(hRootKey, keyName, CoreNatives.KEY_READ, hKey))
@@ -586,31 +568,18 @@ public final class PlatformUtil
 	}
 
 	/**
-	 * setRegestryStringValue
+	 * setRegistryStringValue
 	 * 
 	 * @param keyName
 	 * @param valueName
 	 * @param value
 	 * @return result of operation
 	 */
-	public static boolean setRegestryStringValue(String keyName, String valueName, String value)
+	public static boolean setRegistryStringValue(String keyName, String valueName, String value)
 	{
 		if (Platform.OS_WIN32.equals(Platform.getOS()))
 		{
-			long hRootKey;
-			if (keyName.startsWith("HKCR\\") || keyName.startsWith("HKEY_CLASSES_ROOT\\")) { //$NON-NLS-1$ //$NON-NLS-2$
-				hRootKey = CoreNatives.HKEY_CLASSES_ROOT;
-			}
-			else if (keyName.startsWith("HKLM\\") || keyName.startsWith("HKEY_LOCAL_MACHINE\\")) { //$NON-NLS-1$ //$NON-NLS-2$
-				hRootKey = CoreNatives.HKEY_LOCAL_MACHINE;
-			}
-			else if (keyName.startsWith("HKCU\\") || keyName.startsWith("HKEY_CURRENT_USER\\")) { //$NON-NLS-1$ //$NON-NLS-2$
-				hRootKey = CoreNatives.HKEY_CURRENT_USER;
-			}
-			else
-			{
-				throw new IllegalArgumentException("Invalid regestry key name"); //$NON-NLS-1$
-			}
+			long hRootKey = getRootKey(keyName);
 			keyName = keyName.substring(keyName.indexOf('\\') + 1);
 			long[] hKey = new long[1];
 			if (CoreNatives.RegCreateKey(hRootKey, keyName, CoreNatives.KEY_WRITE, hKey))
@@ -621,6 +590,25 @@ public final class PlatformUtil
 			}
 		}
 		return false;
+	}
+
+	private static long getRootKey(String keyName)
+	{
+		long hRootKey;
+		if (keyName.startsWith("HKCR\\") || keyName.startsWith("HKEY_CLASSES_ROOT\\")) { //$NON-NLS-1$ //$NON-NLS-2$
+			hRootKey = CoreNatives.HKEY_CLASSES_ROOT;
+		}
+		else if (keyName.startsWith("HKLM\\") || keyName.startsWith("HKEY_LOCAL_MACHINE\\")) { //$NON-NLS-1$ //$NON-NLS-2$
+			hRootKey = CoreNatives.HKEY_LOCAL_MACHINE;
+		}
+		else if (keyName.startsWith("HKCU\\") || keyName.startsWith("HKEY_CURRENT_USER\\")) { //$NON-NLS-1$ //$NON-NLS-2$
+			hRootKey = CoreNatives.HKEY_CURRENT_USER;
+		}
+		else
+		{
+			throw new IllegalArgumentException("Invalid registry key name"); //$NON-NLS-1$
+		}
+		return hRootKey;
 	}
 
 	/**
@@ -729,6 +717,16 @@ public final class PlatformUtil
 			return StringUtil.EMPTY;
 		}
 		return null;
+	}
+
+	/**
+	 * Returns the install location of the Studio installation
+	 * 
+	 * @return
+	 */
+	public static IPath getInstallLocation()
+	{
+		return new Path(Platform.getInstallLocation().getURL().getFile());
 	}
 
 	/**

@@ -8,6 +8,7 @@
 package com.aptana.js.internal.core.node;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.net.URL;
 import java.text.MessageFormat;
@@ -32,6 +33,9 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.osgi.framework.Bundle;
 
 import com.aptana.core.IMap;
@@ -39,11 +43,14 @@ import com.aptana.core.ShellExecutable;
 import com.aptana.core.logging.IdeLog;
 import com.aptana.core.util.CollectionsUtil;
 import com.aptana.core.util.ExecutableUtil;
+import com.aptana.core.util.IProcessRunner;
 import com.aptana.core.util.PlatformUtil;
+import com.aptana.core.util.ProcessRunner;
 import com.aptana.core.util.ProcessStatus;
-import com.aptana.core.util.ProcessUtil;
 import com.aptana.core.util.StringUtil;
+import com.aptana.core.util.SudoManager;
 import com.aptana.js.core.JSCorePlugin;
+import com.aptana.js.core.node.INodeJS;
 import com.aptana.js.core.node.INodePackageManager;
 
 /**
@@ -51,6 +58,11 @@ import com.aptana.js.core.node.INodePackageManager;
  */
 public class NodePackageManager implements INodePackageManager
 {
+
+	/**
+	 * The error string that appears in the npm command output.
+	 */
+	private static final String NPM_ERROR = "ERR!"; //$NON-NLS-1$
 
 	/**
 	 * Config value holding location where we install bianries/modules.
@@ -71,26 +83,26 @@ public class NodePackageManager implements INodePackageManager
 	private static final String LIB = "lib"; //$NON-NLS-1$
 
 	/**
-	 * Argument to {@code COLOR} switch/config option so that ANSI colors aren't used in output.
-	 */
-	private static final String FALSE = "false"; //$NON-NLS-1$
-
-	/**
 	 * Special switch/config option to set ANSI color option. Set to {@code FALSE} to disable ANSI color output.
 	 */
 	private static final String COLOR = "--color"; //$NON-NLS-1$
 
+	/**
+	 * Config key/switch to ask for JSON parseable output
+	 */
+	private static final String JSON = "--json"; //$NON-NLS-1$
+
+	/**
+	 * config value to pass after {@value #JSON} to get json output
+	 */
+	private static final String TRUE = "true"; //$NON-NLS-1$
+
+	/**
+	 * Argument to {@code COLOR} switch/config option so that ANSI colors aren't used in output.
+	 */
+	private static final String FALSE = "false"; //$NON-NLS-1$
+
 	private static final Pattern VERSION_PATTERN = Pattern.compile("([0-9]+\\.[0-9]+\\.[0-9]+)"); //$NON-NLS-1$
-
-	/**
-	 * Common install location for Windows
-	 */
-	private static final String APPDATA_NPM = "%APPDATA%\\npm"; //$NON-NLS-1$
-
-	/**
-	 * Coommon install location for Mac/Linux
-	 */
-	private static final String USR_LOCAL_BIN_NPM = "/usr/local/bin/npm"; //$NON-NLS-1$
 
 	/**
 	 * Binary script name.
@@ -106,12 +118,53 @@ public class NodePackageManager implements INodePackageManager
 	private static final String CONFIG = "config"; //$NON-NLS-1$
 	private static final String GET = "get"; //$NON-NLS-1$
 
-	private IPath npmPath;
-
 	/**
 	 * Cached value for NPM's "prefix" config value (where modules get installed).
 	 */
 	private IPath fConfigPrefixPath;
+
+	/**
+	 * The installation of Node we're tied to.
+	 */
+	private final INodeJS nodeJS;
+
+	/**
+	 * Where the NPM binary script should live.
+	 */
+	private IPath npmPath;
+
+	public NodePackageManager(INodeJS nodeJS)
+	{
+		this.nodeJS = nodeJS;
+	}
+
+	protected IPath findNPMOnPATH(IPath possible)
+	{
+		return ExecutableUtil.find(NPM, false, CollectionsUtil.newList(possible));
+	}
+
+	protected IProcessRunner getProcessRunner()
+	{
+		return new ProcessRunner();
+	}
+
+	/**
+	 * A method that grabs the path to the NPM script to run under node. If the file doesn't exist we throw a
+	 * CoreException.
+	 * 
+	 * @return
+	 * @throws CoreException
+	 */
+	private IPath checkedNPMPath() throws CoreException
+	{
+		if (exists())
+		{
+			return getPath();
+		}
+
+		throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
+				Messages.NodePackageManager_ERR_NPMNotInstalled));
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -127,6 +180,7 @@ public class NodePackageManager implements INodePackageManager
 	public IStatus install(String packageName, String displayName, boolean global, char[] password,
 			IPath workingDirectory, IProgressMonitor monitor)
 	{
+		SubMonitor sub = SubMonitor.convert(monitor, 10);
 		String globalPrefixPath = null;
 		try
 		{
@@ -135,26 +189,44 @@ public class NodePackageManager implements INodePackageManager
 			 * global prefix config value for the entire system overrides the global prefix value of the user. So, it
 			 * always install into /usr/lib even though user set a custom value for NPM_CONFIG_PREFIX.
 			 */
+			sub.subTask("Checking global NPM prefix");
 			IPath prefixPath = getConfigPrefixPath();
 			if (prefixPath != null)
 			{
 				List<String> args = CollectionsUtil.newList(CONFIG, GET, PREFIX);
 				// TODO: should cache this value as config prefix path ?
-				IStatus npmStatus = runNpmConfig(args, password, global, workingDirectory, monitor);
+				IStatus npmStatus = runNpmConfig(args, password, global, workingDirectory, sub.newChild(1));
 				if (npmStatus.isOK())
 				{
 					String prefix = npmStatus.getMessage();
+					sub.subTask("Global NPM prefix is " + prefix);
+					// If the sudo cache is timed out, then the password prompt and other details might appear in the
+					// console. So we should strip them off to get the real npm prefix value.
+					if (prefix.contains(SudoManager.PROMPT_MSG))
+					{
+						prefix = prefix.substring(prefix.indexOf(SudoManager.PROMPT_MSG)
+								+ SudoManager.PROMPT_MSG.length());
+					}
+
 					// Set the global prefix path only if it is not the default value.
 					if (!prefixPath.toOSString().equals(prefix))
 					{
+						sub.subTask("Global and user NPM prefix don't match, setting global prefix temporarily to: "
+								+ prefixPath.toOSString());
 						globalPrefixPath = prefix;
-						setGlobalPrefixPath(password, workingDirectory, monitor, prefixPath.toOSString());
+						setGlobalPrefixPath(password, workingDirectory, sub.newChild(1), prefixPath.toOSString());
 					}
 				}
+				else
+				{
+					IdeLog.logWarning(JSCorePlugin.getDefault(),
+							"Failed to get global prefix for NPM: " + npmStatus.getMessage());
+				}
 			}
-
+			sub.setWorkRemaining(8);
+			sub.subTask("Running npm install command");
 			IStatus status = runNpmInstaller(packageName, displayName, global, password, workingDirectory, INSTALL,
-					monitor);
+					sub.newChild(6));
 			if (status.getSeverity() == IStatus.CANCEL)
 			{
 				return Status.OK_STATUS;
@@ -181,7 +253,7 @@ public class NodePackageManager implements INodePackageManager
 				if (!StringUtil.isEmpty(error))
 				{
 					String[] lines = error.split("\n"); //$NON-NLS-1$
-					if (lines.length > 0 && lines[lines.length - 1].contains("ERR!")) //$NON-NLS-1$
+					if (lines.length > 0 && lines[lines.length - 1].contains(NPM_ERROR))
 					{
 						IdeLog.logError(JSCorePlugin.getDefault(),
 								MessageFormat.format("Failed to install {0}.\n\n{1}", packageName, error)); //$NON-NLS-1$
@@ -206,25 +278,34 @@ public class NodePackageManager implements INodePackageManager
 			// Set the global npm prefix path to its original value.
 			if (!StringUtil.isEmpty(globalPrefixPath))
 			{
-				setGlobalPrefixPath(password, workingDirectory, monitor, globalPrefixPath);
+				try
+				{
+					sub.subTask("Resetting global NPM prefix");
+					setGlobalPrefixPath(password, workingDirectory, sub.newChild(1), globalPrefixPath);
+				}
+				catch (CoreException e)
+				{
+					return e.getStatus();
+				}
 			}
+			sub.done();
 		}
 	}
 
 	private IStatus setGlobalPrefixPath(char[] password, IPath workingDirectory, IProgressMonitor monitor,
-			String globalPrefixPath)
+			String globalPrefixPath) throws CoreException
 	{
 		List<String> args = CollectionsUtil.newList(CONFIG, "set", PREFIX, globalPrefixPath); //$NON-NLS-1$
 		return runNpmConfig(args, password, true, workingDirectory, monitor);
 	}
 
-	private IStatus runNpmConfig(List<String> args, char[] password, boolean global, IPath workingDirectory,
-			IProgressMonitor monitor)
+	protected IStatus runNpmConfig(List<String> args, char[] password, boolean global, IPath workingDirectory,
+			IProgressMonitor monitor) throws CoreException
 	{
-		List<String> sudoArgs = getNpmSudoArgs(global);
+		List<String> sudoArgs = getNpmArguments(global, password);
 		sudoArgs.addAll(args);
-		return ProcessUtil.run(CollectionsUtil.getFirstElement(sudoArgs), workingDirectory, password, ShellExecutable.getEnvironment(), monitor,
-				sudoArgs.subList(1, sudoArgs.size()).toArray(new String[sudoArgs.size() - 1]));
+		return getProcessRunner().run(workingDirectory, ShellExecutable.getEnvironment(workingDirectory), password,
+				sudoArgs, monitor);
 	}
 
 	/**
@@ -277,7 +358,7 @@ public class NodePackageManager implements INodePackageManager
 			String password = data.getPassword();
 			builder.append(password);
 			builder.append('@');
-			env.put(ProcessUtil.TEXT_TO_OBFUSCATE, password);
+			env.put(IProcessRunner.TEXT_TO_OBFUSCATE, password);
 		}
 		builder.append(data.getHost());
 		if (data.getPort() != -1)
@@ -288,60 +369,39 @@ public class NodePackageManager implements INodePackageManager
 		return builder.toString();
 	}
 
-	public IPath findNPM()
+	public Set<String> list(boolean global) throws CoreException
 	{
-		if (npmPath == null)
+		IStatus status;
+		if (global)
 		{
-			List<IPath> commonLocations;
-			if (PlatformUtil.isWindows())
+			status = runInBackground(GLOBAL_ARG, PARSEABLE_ARG, LIST);
+		}
+		else
+		{
+			status = runInBackground(PARSEABLE_ARG, LIST);
+		}
+
+		String output;
+		if (!status.isOK())
+		{
+			if (status.getCode() == 1 && status instanceof ProcessStatus)
 			{
-				commonLocations = CollectionsUtil.newList(Path.fromOSString(PlatformUtil
-						.expandEnvironmentStrings(APPDATA_NPM)));
-				IPath nodePath = JSCorePlugin.getDefault().getNodeJSService().getValidExecutable();
-				if (nodePath != null)
-				{
-					nodePath = nodePath.removeLastSegments(1);// Remove file extension.
-					commonLocations.add(nodePath);
-					ShellExecutable.updatePathEnvironment(PlatformUtil.expandEnvironmentStrings(APPDATA_NPM));
-				}
+				ProcessStatus ps = (ProcessStatus) status;
+				output = ps.getStdOut();
+				// TODO What else can we do to validate that this output is OK?
 			}
 			else
 			{
-				commonLocations = CollectionsUtil.newList(Path.fromOSString(USR_LOCAL_BIN_NPM));
-			}
-			IPath path = ExecutableUtil.find(NPM, true, commonLocations);
-			if (path != null && path.toFile().exists())
-			{
-				npmPath = path;
+				throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
+						Messages.NodePackageManager_FailedListingError, status)));
 			}
 		}
-		return npmPath;
-	}
-
-	public Set<String> list(boolean global) throws CoreException
-	{
-		IPath npmPath = findNPM();
-		if (npmPath == null)
+		else
 		{
-			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
-					Messages.NodePackageManager_ERR_NPMNotInstalled));
-		}
-		List<String> args = CollectionsUtil.newList(PARSEABLE_ARG, LIST);
-		if (global)
-		{
-			args.add(0, GLOBAL_ARG);
-		}
-
-		IStatus status = ProcessUtil.runInBackground(npmPath.toOSString(), null, ShellExecutable.getEnvironment(),
-				args.toArray(new String[args.size()]));
-		if (!status.isOK())
-		{
-			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
-					Messages.NodePackageManager_FailedListingError));
+			output = status.getMessage();
 		}
 
 		// Need to parse the output!
-		String output = status.getMessage();
 		String[] lines = StringUtil.LINE_SPLITTER.split(output);
 		List<IPath> paths = CollectionsUtil.map(CollectionsUtil.newSet(lines), new IMap<String, IPath>()
 		{
@@ -356,8 +416,9 @@ public class NodePackageManager implements INodePackageManager
 			try
 			{
 				// The paths we get are locations on disk. We can tell a module's name by looking for a path
-				// that is a child of 'nod_modules', i.e. "/usr/local/lib/node_modules/alloy"
-				if (NODE_MODULES.equals(path.segment(path.segmentCount() - 2)))
+				// that is a child of 'node_modules', i.e. "/usr/local/lib/node_modules/alloy"
+				int count = path.segmentCount();
+				if (count >= 2 && NODE_MODULES.equals(path.segment(count - 2)))
 				{
 					installed.add(path.lastSegment());
 				}
@@ -380,10 +441,7 @@ public class NodePackageManager implements INodePackageManager
 		try
 		{
 			String version = getInstalledVersion(packageName);
-			if (!StringUtil.isEmpty(version))
-			{
-				return true;
-			}
+			return !StringUtil.isEmpty(version); // Assume it's not installed if process returned OK, but had no entry
 		}
 		catch (CoreException e)
 		{
@@ -397,14 +455,7 @@ public class NodePackageManager implements INodePackageManager
 
 	public IPath getModulesPath(String packageName) throws CoreException
 	{
-		IPath npmPath = findNPM();
-		if (npmPath == null)
-		{
-			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
-					Messages.NodePackageManager_ERR_NPMNotInstalled));
-		}
-		IStatus status = ProcessUtil.runInBackground(npmPath.toOSString(), null, ShellExecutable.getEnvironment(),
-				PARSEABLE_ARG, LIST, packageName, GLOBAL_ARG);
+		IStatus status = runInBackground(PARSEABLE_ARG, LIST, packageName, GLOBAL_ARG);
 		if (!status.isOK())
 		{
 			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
@@ -422,59 +473,56 @@ public class NodePackageManager implements INodePackageManager
 
 	public String getInstalledVersion(String packageName, boolean global, IPath workingDir) throws CoreException
 	{
-		IPath npmPath = findNPM();
-		if (npmPath == null)
-		{
-			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
-					Messages.NodePackageManager_ERR_NPMNotInstalled));
-		}
-		List<String> args = CollectionsUtil.newList("ls", packageName, COLOR, FALSE); //$NON-NLS-1$
+		IPath npmPath = checkedNPMPath();
+		List<String> args = CollectionsUtil.newList(npmPath.toOSString(), "ls", packageName, COLOR, FALSE, JSON, TRUE); //$NON-NLS-1$
 		if (global)
 		{
 			args.add(GLOBAL_ARG);
 		}
-		IStatus status = ProcessUtil.runInBackground(npmPath.toOSString(), workingDir,
-				ShellExecutable.getEnvironment(), args.toArray(new String[args.size()]));
+		IStatus status = nodeJS.runInBackground(workingDir, ShellExecutable.getEnvironment(), args);
 		if (!status.isOK())
 		{
 			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
-					Messages.NodePackageManager_FailedToDetermineInstalledVersion, packageName)));
+					Messages.NodePackageManager_FailedToDetermineInstalledVersion, packageName, status.getMessage())));
 		}
-		String output = status.getMessage();
-		int index = output.indexOf(packageName + '@');
-		if (index != -1)
+		try
 		{
-			output = output.substring(index + packageName.length() + 1);
-			int space = output.indexOf(' ');
-			if (space != -1)
+			String output = status.getMessage();
+			JSONObject json = (JSONObject) new JSONParser().parse(output);
+			if (!json.containsKey("dependencies"))
 			{
-				output = output.substring(0, space);
+				return null;
 			}
-			return output;
+			JSONObject dependencies = (JSONObject) json.get("dependencies");
+			if (!dependencies.containsKey(packageName))
+			{
+				return null;
+			}
+			JSONObject pkg = (JSONObject) dependencies.get(packageName);
+			return (String) pkg.get("version");
 		}
-		return null;
+		catch (ParseException e)
+		{
+			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
+					Messages.NodePackageManager_FailedToDetermineInstalledVersion, packageName, e.getMessage())));
+		}
 	}
 
 	public String getLatestVersionAvailable(String packageName) throws CoreException
 	{
 		// get the latest version
 		// npm view titanium version
-		IPath npmPath = findNPM();
-		if (npmPath == null)
-		{
-			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
-					Messages.NodePackageManager_ERR_NPMNotInstalled));
-		}
+		IPath npmPath = checkedNPMPath();
+
 		Map<String, String> env = ShellExecutable.getEnvironment();
-		List<String> args = CollectionsUtil.newList("view", packageName, "version");//$NON-NLS-1$ //$NON-NLS-2$
+		List<String> args = CollectionsUtil.newList(npmPath.toOSString(), "view", packageName, "version");//$NON-NLS-1$ //$NON-NLS-2$
 		args.addAll(proxySettings(env));
 
-		IStatus status = ProcessUtil.runInBackground(npmPath.toOSString(), null, env,
-				args.toArray(new String[args.size()]));
+		IStatus status = nodeJS.runInBackground(null, env, args);
 		if (!status.isOK())
 		{
 			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
-					Messages.NodePackageManager_FailedToDetermineLatestVersion, packageName)));
+					Messages.NodePackageManager_FailedToDetermineLatestVersion, packageName, status.getMessage())));
 		}
 		String message = status.getMessage().trim();
 		Matcher m = VERSION_PATTERN.matcher(message);
@@ -485,21 +533,41 @@ public class NodePackageManager implements INodePackageManager
 		return null;
 	}
 
-	public String getConfigValue(String key) throws CoreException
+	@SuppressWarnings("unchecked")
+	public List<String> getAvailableVersions(String packageName) throws CoreException
 	{
-		// npm config get <key>
-		IPath npmPath = findNPM();
-		if (npmPath == null)
-		{
-			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
-					Messages.NodePackageManager_ERR_NPMNotInstalled));
-		}
-		IStatus status = ProcessUtil.runInBackground(npmPath.toOSString(), null, ShellExecutable.getEnvironment(),
-				CONFIG, GET, key); //$NON-NLS-1$ //$NON-NLS-2$
+		IPath npmPath = checkedNPMPath();
+
+		Map<String, String> env = ShellExecutable.getEnvironment();
+		List<String> args = CollectionsUtil.newList(npmPath.toOSString(),
+				"view", packageName, "versions", COLOR, FALSE, JSON, TRUE);//$NON-NLS-1$ //$NON-NLS-2$
+		args.addAll(proxySettings(env));
+
+		IStatus status = nodeJS.runInBackground(null, env, args);
 		if (!status.isOK())
 		{
 			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
-					Messages.NodePackageManager_ConfigFailure, key)));
+					Messages.NodePackageManager_FailedToDetermineLatestVersion, packageName, status.getMessage())));
+		}
+		String message = status.getMessage().trim();
+		try
+		{
+			return (List<String>) new JSONParser().parse(message);
+		}
+		catch (ParseException e)
+		{
+			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, e.getMessage(), e));
+		}
+	}
+
+	public String getConfigValue(String key) throws CoreException
+	{
+		// npm config get <key>
+		IStatus status = runInBackground(CONFIG, GET, key);
+		if (!status.isOK())
+		{
+			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
+					Messages.NodePackageManager_ConfigFailure, key, status.getMessage())));
 		}
 		return status.getMessage().trim();
 	}
@@ -510,15 +578,15 @@ public class NodePackageManager implements INodePackageManager
 	{
 		SubMonitor sub = SubMonitor.convert(monitor,
 				MessageFormat.format(Messages.NodePackageManager_InstallingTaskName, displayName), 100);
-		IPath npmPath = findNPM();
-		if (npmPath == null)
-		{
-			throw new CoreException(new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID,
-					Messages.NodePackageManager_ERR_NPMNotInstalled));
-		}
 		try
 		{
-			List<String> args = getNpmSudoArgs(global);
+			List<String> args = getNpmArguments(global, password);
+			if (!PlatformUtil.isWindows() && global)
+			{
+				// TISTUD-6786, force -H option under SUDO at end of args
+				int i = args.indexOf(SudoManager.END_OF_OPTIONS);
+				args.add(i, SudoManager.RETAIN_HOME);
+			}
 			CollectionsUtil.addToList(args, command, packageName, COLOR, FALSE);
 
 			Map<String, String> environment;
@@ -531,7 +599,7 @@ public class NodePackageManager implements INodePackageManager
 				environment = ShellExecutable.getEnvironment();
 			}
 			args.addAll(proxySettings(environment));
-			environment.put(ProcessUtil.REDIRECT_ERROR_STREAM, StringUtil.EMPTY);
+			environment.put(IProcessRunner.REDIRECT_ERROR_STREAM, StringUtil.EMPTY);
 
 			// HACK for TISTUD-4101
 			if (PlatformUtil.isWindows())
@@ -564,8 +632,7 @@ public class NodePackageManager implements INodePackageManager
 				}
 			}
 
-			return ProcessUtil.run(CollectionsUtil.getFirstElement(args), workingDirectory, password, environment,
-					monitor, args.subList(1, args.size()).toArray(new String[args.size() - 1]));
+			return getProcessRunner().run(workingDirectory, environment, password, args, sub.newChild(100));
 		}
 		finally
 		{
@@ -573,22 +640,21 @@ public class NodePackageManager implements INodePackageManager
 		}
 	}
 
-	private List<String> getNpmSudoArgs(boolean global)
+	private List<String> getNpmArguments(boolean global, char[] sudoPassword) throws CoreException
 	{
+		IPath npmPath = checkedNPMPath();
 		List<String> args = new ArrayList<String>(8);
 		if (global)
 		{
-			if (!PlatformUtil.isWindows())
-			{
-				args.add("sudo"); //$NON-NLS-1$
-				args.add("-S"); //$NON-NLS-1$
-				args.add("--"); //$NON-NLS-1$
-			}
+			SudoManager sudoMngr = new SudoManager();
+			args.addAll(sudoMngr.getArguments(sudoPassword));
+			args.add(nodeJS.getPath().toOSString());
 			args.add(npmPath.toOSString());
 			args.add(GLOBAL_ARG);
 		}
 		else
 		{
+			args.add(nodeJS.getPath().toOSString());
 			args.add(npmPath.toOSString());
 		}
 		return args;
@@ -607,10 +673,9 @@ public class NodePackageManager implements INodePackageManager
 			if (!status.isOK())
 			{
 				String message = status.getMessage();
-				IdeLog.logError(JSCorePlugin.getDefault(),
-						MessageFormat.format("Failed to uninstall {0}.\n{1}", packageName, message)); //$NON-NLS-1$
-				return new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, MessageFormat.format(
-						Messages.NodePackageManager_FailedInstallError, packageName));
+				String logMsg = MessageFormat.format("Failed to uninstall {0}.\n{1}", packageName, message); //$NON-NLS-1$
+				IdeLog.logError(JSCorePlugin.getDefault(), logMsg);
+				return new Status(IStatus.ERROR, JSCorePlugin.PLUGIN_ID, logMsg);
 			}
 			return status;
 		}
@@ -660,6 +725,7 @@ public class NodePackageManager implements INodePackageManager
 
 	public synchronized IPath getConfigPrefixPath() throws CoreException
 	{
+		// FIXME This caches the prefix value indefinitely. Is there any way to wipe the cache intelligently?
 		if (fConfigPrefixPath == null)
 		{
 			String npmConfigPrefixPath = ShellExecutable.getEnvironment().get(NPM_CONFIG_PREFIX);
@@ -675,8 +741,95 @@ public class NodePackageManager implements INodePackageManager
 		return fConfigPrefixPath;
 	}
 
-	public IStatus cleanNpmCache(IProgressMonitor monitor)
+	public IStatus cleanNpmCache(char[] password, boolean runWithSudo, IProgressMonitor monitor)
 	{
-		return ProcessUtil.runInBackground(NPM, null, "cache", "clean"); //$NON-NLS-1$ //$NON-NLS-2$
+		List<String> args;
+		try
+		{
+			args = getNpmArguments(runWithSudo, password);
+		}
+		catch (CoreException e)
+		{
+			return e.getStatus();
+		}
+		args.remove(GLOBAL_ARG);
+		CollectionsUtil.addToList(args, "cache", "clean"); //$NON-NLS-1$ //$NON-NLS-2$
+		String path = PlatformUtil.expandEnvironmentStrings("~"); //$NON-NLS-1$
+		IPath userHome = Path.fromOSString(path);
+		IStatus status = getProcessRunner().run(userHome, ShellExecutable.getEnvironment(), password, args, monitor);
+
+		String cacheCleanOutput = status.getMessage();
+		if (!status.isOK() || cacheCleanOutput.contains(NPM_ERROR))
+		{
+			return new Status(Status.ERROR, JSCorePlugin.PLUGIN_ID, cacheCleanOutput);
+		}
+		return status;
+	}
+
+	public String getVersion() throws CoreException
+	{
+		IStatus status = runInBackground("-v"); //$NON-NLS-1$
+		if (!status.isOK())
+		{
+			throw new CoreException(status);
+		}
+		return status.getMessage();
+	}
+
+	public boolean exists()
+	{
+		IPath path = getPath();
+		if (path == null)
+		{
+			return false;
+		}
+		return path.toFile().isFile();
+	}
+
+	public synchronized IPath getPath()
+	{
+		if (npmPath == null)
+		{
+			IPath nodeParent = nodeJS.getPath().removeLastSegments(1);
+
+			// Windows "npm" script is a sh script that tries to execute $basedir/node_modules/npm/bin/npm-cli.js under
+			// "$basedir/node.exe" if it exists.
+			// So for Windows, it would appear we'd need to run:
+			// /path/to/node.exe /path/to/node/node_modules/npm/bin/npm-cli.js <args>
+			if (PlatformUtil.isWindows())
+			{
+				npmPath = nodeParent.append(NODE_MODULES).append(NPM).append(BIN).append("npm-cli.js"); //$NON-NLS-1$
+			}
+			else
+			{
+
+				IPath possible = nodeParent.append(NPM);
+				if (possible.toFile().exists())
+				{
+					// Typically node is co-located with npm (i.e. /usr/bin/npm and /usr/bin/node).
+					npmPath = possible;
+				}
+				else
+				{
+					// However if installed from source they may live in separate locations.
+					// So let's search the PATH for NPM
+					npmPath = findNPMOnPATH(possible);
+				}
+			}
+		}
+		return npmPath;
+	}
+
+	public IStatus runInBackground(String... args) throws CoreException
+	{
+		List<String> newArgs = CollectionsUtil.newList(args);
+		newArgs.add(0, checkedNPMPath().toOSString());
+		return nodeJS.runInBackground(null, null, newArgs);
+	}
+
+	public IPath findNpmPackagePath(String executableName, boolean appendExtension, List<IPath> searchLocations,
+			FileFilter filter)
+	{
+		return ExecutableUtil.find(executableName, true, searchLocations, filter);
 	}
 }

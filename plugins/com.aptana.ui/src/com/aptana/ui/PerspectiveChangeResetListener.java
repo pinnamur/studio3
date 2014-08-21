@@ -15,6 +15,7 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.IPerspectiveDescriptor;
 import org.eclipse.ui.IWorkbenchPage;
@@ -49,14 +50,14 @@ public class PerspectiveChangeResetListener extends PerspectiveAdapter
 
 	public void perspectiveActivated(IWorkbenchPage page, IPerspectiveDescriptor perspective)
 	{
-		if (perspectiveId.equals(perspective.getId()))
+		if (perspectiveId != null && perspective != null && perspectiveId.equals(perspective.getId()))
 		{
 			int version = Platform.getPreferencesService().getInt(pluginId, preferenceId, 0, null);
 			if (perspectiveVersion > version)
 			{
 				resetPerspective(page);
 				// we will only ask once regardless if user chose to update the perspective
-				IEclipsePreferences prefs = (EclipseUtil.instanceScope()).getNode(pluginId);
+				IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(pluginId);
 				prefs.putInt(preferenceId, perspectiveVersion);
 				try
 				{
@@ -68,16 +69,19 @@ public class PerspectiveChangeResetListener extends PerspectiveAdapter
 				}
 			}
 		}
-		String perspectiveId = perspective.getId();
-		if (!StringUtil.isEmpty(perspectiveId))
+		if (perspective != null)
 		{
-			int index = perspectiveId.lastIndexOf("."); //$NON-NLS-1$
-			if (index > -1)
+			String perspectiveId = perspective.getId();
+			if (!StringUtil.isEmpty(perspectiveId))
 			{
-				perspectiveId = perspectiveId.substring(index + 1);
+				int index = perspectiveId.lastIndexOf("."); //$NON-NLS-1$
+				if (index > -1)
+				{
+					perspectiveId = perspectiveId.substring(index + 1);
+				}
+				StudioAnalytics.getInstance().sendEvent(
+						new FeatureEvent(MessageFormat.format(PERSPECTIVE_ACTIVATE_EVENT, perspectiveId), null));
 			}
-			StudioAnalytics.getInstance().sendEvent(
-					new FeatureEvent(MessageFormat.format(PERSPECTIVE_ACTIVATE_EVENT, perspectiveId), null));
 		}
 	}
 

@@ -45,6 +45,20 @@ public class ProcessStatus extends Status
 		{
 			return stdOut.substring(0, stdOut.length() - 1);
 		}
+		// Append any error line on top of the stdOut (one line only)
+		if (!StringUtil.isEmpty(stderr))
+		{
+			String[] lines = stderr.split("[\n\r]+"); //$NON-NLS-1$
+			for (int i = lines.length - 1; i >= 0; i--)
+			{
+				String line = lines[i];
+				if (line.startsWith("[ERROR] :")) //$NON-NLS-1$
+				{
+					stdOut = line.substring(9).trim() + '\n' + stdOut;
+					break;
+				}
+			}
+		}
 		return stdOut;
 	}
 
@@ -68,4 +82,18 @@ public class ProcessStatus extends Status
 		return new Status(getSeverity(), getPlugin(), getCode(), getStdErr(), null);
 	}
 
+	@Override
+	public String toString()
+	{
+		StringBuilder buf = new StringBuilder();
+		buf.append("ProcessStatus"); //$NON-NLS-1$
+		buf.append(" exitcode="); //$NON-NLS-1$
+		buf.append(getCode());
+		buf.append(" stdout='"); //$NON-NLS-1$
+		buf.append(getStdOut());
+		buf.append("' stderr='"); //$NON-NLS-1$
+		buf.append(getStdErr());
+		buf.append('\'');
+		return buf.toString();
+	}
 }

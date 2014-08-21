@@ -7,17 +7,14 @@
  */
 package com.aptana.syncing.ui.tests;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
+import com.aptana.ide.syncing.ui.navigator.SiteConnectionsContentProviderTest;
+
+@RunWith(Suite.class)
+@SuiteClasses({ SiteConnectionsContentProviderTest.class })
 public class AllTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(AllTests.class.getName());
-		// $JUnit-BEGIN$
-		// $JUnit-END$
-		return suite;
-	}
 }

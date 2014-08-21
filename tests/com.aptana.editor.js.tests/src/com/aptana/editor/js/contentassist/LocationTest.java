@@ -7,24 +7,62 @@
  */
 package com.aptana.editor.js.contentassist;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 import java.text.MessageFormat;
 
-import com.aptana.editor.js.tests.JSEditorBasedTestCase;
+import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.jface.text.Document;
+import org.eclipse.jface.text.IDocument;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-public class LocationTest extends JSEditorBasedTestCase
+import com.aptana.core.util.IOUtil;
+
+public class LocationTest
 {
+	private JSContentAssistProcessor processor;
+	private IDocument document;
+	private String source;
+
+	@Before
+	public void setup()
+	{
+		processor = new JSContentAssistProcessor(null)
+		{
+			@Override
+			protected IDocument getDocument()
+			{
+				return document;
+			}
+		};
+	}
+
+	@After
+	public void teardown()
+	{
+		processor = null;
+		document = null;
+		source = null;
+	}
+
 	private static class LocationTypeRange
 	{
 		public final LocationType location;
 		public final int startingOffset;
 		public final int endingOffset;
-		
+
 		public LocationTypeRange(LocationType location, int offset)
 		{
 			this.location = location;
 			this.startingOffset = this.endingOffset = offset;
 		}
-		
+
 		public LocationTypeRange(LocationType location, int startingOffset, int endingOffset)
 		{
 			this.location = location;
@@ -32,7 +70,7 @@ public class LocationTest extends JSEditorBasedTestCase
 			this.endingOffset = endingOffset;
 		}
 	}
-	
+
 	/**
 	 * testLocations
 	 * 
@@ -41,33 +79,41 @@ public class LocationTest extends JSEditorBasedTestCase
 	 */
 	protected void testLocations(String resource, LocationTypeRange... ranges)
 	{
-		// setup everything for the test
-		this.setupTestContext(resource);
 
-		for (LocationTypeRange range : ranges)
+		try
 		{
-			for (int offset = range.startingOffset; offset <= range.endingOffset; offset++)
+			// setup everything for the test
+			this.source = IOUtil.read(FileLocator.openStream(Platform.getBundle("com.aptana.editor.js.tests"),
+					Path.fromPortableString(resource), false));
+			this.document = new Document(this.source);
+
+			for (LocationTypeRange range : ranges)
 			{
-				LocationType location = this.processor.getLocationType(this.document, offset);
-				// @formatter:off
-				String message = MessageFormat.format(
-					"Expected {0} at location {1} of ''{2}'': character = ''{3}''",
-					range.location.toString(),
-					Integer.toString(offset),
-					this.source,
-					(offset < this.source.length()) ? this.source.charAt(offset) : '\0'
-				);
-				// @formatter:on
-				assertEquals(message, range.location, location);
+				for (int offset = range.startingOffset; offset <= range.endingOffset; offset++)
+				{
+					LocationType location = this.processor.getLocationType(this.document, offset);
+					// @formatter:off
+					String message = MessageFormat.format(
+						"Expected {0} at location {1} of ''{2}'': character = ''{3}''",
+						range.location.toString(),
+						Integer.toString(offset),
+						this.source,
+						(offset < this.source.length()) ? this.source.charAt(offset) : '\0'
+					);
+					// @formatter:on
+					assertEquals(message, range.location, location);
+				}
 			}
+		}
+		catch (IOException e)
+		{
+			fail(e.getMessage());
 		}
 	}
 
 	// @formatter:off
 	
-	/**
-	 * testInvokeWithoutParams
-	 */
+	@Test
 	public void testInvokeWithoutParams()
 	{
 		this.testLocations(
@@ -76,13 +122,12 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.NONE, 1, 15),
 			new LocationTypeRange(LocationType.IN_GLOBAL, 16, 20),
 			new LocationTypeRange(LocationType.IN_VARIABLE_NAME, 21, 23),
-			new LocationTypeRange(LocationType.IN_GLOBAL, 24, 25)
+			new LocationTypeRange(LocationType.IN_ARGUMENTS, 24),
+			new LocationTypeRange(LocationType.IN_GLOBAL, 25)
 		);
 	}
-	
-	/**
-	 * testInvokeWithIncompleteParams
-	 */
+
+	@Test
 	public void testInvokeWithIncompleteParams()
 	{
 		this.testLocations(
@@ -91,15 +136,14 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.NONE, 1, 15),
 			new LocationTypeRange(LocationType.IN_GLOBAL, 16, 20),
 			new LocationTypeRange(LocationType.IN_VARIABLE_NAME, 21, 23),
-			new LocationTypeRange(LocationType.IN_GLOBAL, 24),
+			new LocationTypeRange(LocationType.IN_ARGUMENTS, 24),
 			new LocationTypeRange(LocationType.NONE, 25, 31),
-			new LocationTypeRange(LocationType.IN_GLOBAL, 32, 33)
+			new LocationTypeRange(LocationType.IN_ARGUMENTS, 32),
+			new LocationTypeRange(LocationType.IN_GLOBAL, 33)
 		);
 	}
 	
-	/**
-	 * testSimpleAssignment1
-	 */
+	@Test
 	public void testSimpleAssignment1()
 	{
 		this.testLocations(
@@ -112,9 +156,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testSimpleAssignment2
-	 */
+	@Test
 	public void testSimpleAssignment2()
 	{
 		this.testLocations(
@@ -127,9 +169,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testSimpleBinaryOperator1
-	 */
+	@Test
 	public void testSimpleBinaryOperator1()
 	{
 		this.testLocations(
@@ -143,9 +183,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testSimpleBinaryOperator2
-	 */
+	@Test
 	public void testSimpleBinaryOperator2()
 	{
 		this.testLocations(
@@ -160,9 +198,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testGetSimpleProperty1
-	 */
+	@Test
 	public void testGetSimpleProperty1()
 	{
 		this.testLocations(
@@ -177,9 +213,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testSimpleGetProperty2
-	 */
+	@Test
 	public void testSimpleGetProperty2()
 	{
 		this.testLocations(
@@ -196,9 +230,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testSimpleGetElement1
-	 */
+	@Test
 	public void testSimpleGetElement1()
 	{
 		this.testLocations(
@@ -213,9 +245,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testSimpleGetElement2
-	 */
+	@Test
 	public void testSimpleGetElement2()
 	{
 		this.testLocations(
@@ -230,9 +260,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
-	/**
-	 * testTryCatchFinally
-	 */
+	@Test
 	public void testTryCatchFinally()
 	{
 		this.testLocations(
@@ -246,10 +274,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 33, 36)
 		);
 	}
-	
-	/**
-	 * testConditional
-	 */
+
+	@Test
 	public void testConditional()
 	{
 		this.testLocations(
@@ -269,10 +295,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 22, 23)
 		);
 	}
-	
-	/**
-	 * testNew
-	 */
+
+	@Test
 	public void testNew()
 	{
 		this.testLocations(
@@ -286,10 +310,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 10, 11)
 		);
 	}
-	
-	/**
-	 * testVar1
-	 */
+
+	@Test
 	public void testVar1()
 	{
 		this.testLocations(
@@ -300,10 +322,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 8, 9)
 		);
 	}
-	
-	/**
-	 * testVar2
-	 */
+
+	@Test
 	public void testVar2()
 	{
 		this.testLocations(
@@ -316,10 +336,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 13, 14)
 		);
 	}
-	
-	/**
-	 * testVar3
-	 */
+
+	@Test
 	public void testVar3()
 	{
 		this.testLocations(
@@ -333,10 +351,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 13, 14)
 		);
 	}
-	
-	/**
-	 * testDo
-	 */
+
+	@Test
 	public void testDo()
 	{
 		this.testLocations(
@@ -350,10 +366,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 19, 20)
 		);
 	}
-	
-	/**
-	 * testForIn
-	 */
+
+	@Test
 	public void testForIn()
 	{
 		this.testLocations(
@@ -368,10 +382,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 20, 22)
 		);
 	}
-	
-	/**
-	 * testFor
-	 */
+
+	@Test
 	public void testFor()
 	{
 		this.testLocations(
@@ -392,10 +404,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 30, 33)
 		);
 	}
-	
-	/**
-	 * testIf
-	 */
+
+	@Test
 	public void testIf()
 	{
 		this.testLocations(
@@ -410,9 +420,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 
-	/**
-	 * testIfAtEOF
-	 */
+	@Test
 	public void testIfAtEOF()
 	{
 		this.testLocations(
@@ -420,10 +428,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_PROPERTY_NAME, 21)
 		);
 	}
-	
-	/**
-	 * testLabelledFor
-	 */
+
+	@Test
 	public void testLabelledFor()
 	{
 		this.testLocations(
@@ -457,10 +463,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 90, 96)
 		);
 	}
-	
-	/**
-	 * testArrayLiteral
-	 */
+
+	@Test
 	public void testArrayLiteral()
 	{
 		this.testLocations(
@@ -478,10 +482,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 31, 34)
 		);
 	}
-	
-	/**
-	 * testObjectLiteral
-	 */
+
+	@Test
 	public void testObjectLiteral()
 	{
 		this.testLocations(
@@ -502,10 +504,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 38, 39)
 		);
 	}
-	
-	/**
-	 * testSwitch
-	 */
+
+	@Test
 	public void testSwitch()
 	{
 		this.testLocations(
@@ -526,23 +526,21 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 56, 57)
 		);
 	}
-	
-	/**
-	 * testGroup
-	 */
+
+	@Test
 	public void testGroup()
 	{
 		this.testLocations(
 			"locations/group.js",
 			new LocationTypeRange(LocationType.IN_GLOBAL, 0, 1),
 			new LocationTypeRange(LocationType.NONE, 2, 12),
-			new LocationTypeRange(LocationType.IN_GLOBAL, 13, 20)
+			new LocationTypeRange(LocationType.IN_GLOBAL, 13, 16),
+			new LocationTypeRange(LocationType.IN_ARGUMENTS, 17),
+			new LocationTypeRange(LocationType.IN_GLOBAL, 18, 20)
 		);
 	}
-	
-	/**
-	 * testFunctionWithReturn
-	 */
+
+	@Test
 	public void testFunctionWithReturn()
 	{
 		this.testLocations(
@@ -556,10 +554,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 30, 33)
 		);
 	}
-	
-	/**
-	 * testFunctionWithThrow
-	 */
+
+	@Test
 	public void testFunctionWithThrow()
 	{
 		this.testLocations(
@@ -573,10 +569,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 32, 35)
 		);
 	}
-	
-	/**
-	 * testWhile
-	 */
+
+	@Test
 	public void testWhile()
 	{
 		this.testLocations(
@@ -588,10 +582,8 @@ public class LocationTest extends JSEditorBasedTestCase
 			new LocationTypeRange(LocationType.IN_GLOBAL, 14, 17)
 		);
 	}
-	
-	/**
-	 * testWith
-	 */
+
+	@Test
 	public void testWith()
 	{
 		this.testLocations(
@@ -605,9 +597,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 
-	/**
-	 * testErrorInObjectLiteral
-	 */
+	@Test
 	public void testErrorInObjectLiteral()
 	{
 		this.testLocations(
@@ -616,6 +606,7 @@ public class LocationTest extends JSEditorBasedTestCase
 		);
 	}
 	
+	@Test
 	public void testThis()
 	{
 		this.testLocations(

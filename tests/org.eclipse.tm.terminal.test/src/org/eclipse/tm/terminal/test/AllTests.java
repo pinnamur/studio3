@@ -10,34 +10,20 @@
  *******************************************************************************/
 package org.eclipse.tm.terminal.test;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
 /**
  * Master test suite to run all terminal unit tests.
  */
-public class AllTests extends TestCase
+@RunWith(Suite.class)
+//@formatter:off
+@SuiteClasses({
+	AutomatedTests.class,
+	AutomatedPluginTests.class,
+})
+//@formatter:on
+public class AllTests
 {
-
-	public AllTests()
-	{
-		super(null);
-	}
-
-	public AllTests(String name)
-	{
-		super(name);
-	}
-
-	/**
-	 * Call each AllTests class from each of the test packages.
-	 */
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(AllTests.class.getName());
-		suite.addTest(AutomatedTests.suite());
-		suite.addTest(AutomatedPluginTests.suite());
-		return suite;
-	}
 }

@@ -27,6 +27,7 @@ import org.eclipse.core.runtime.PerformanceStats;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
@@ -49,7 +50,6 @@ import org.jruby.runtime.builtin.IRubyObject;
 
 import com.aptana.core.logging.IdeLog;
 import com.aptana.core.util.CollectionsUtil;
-import com.aptana.core.util.EclipseUtil;
 import com.aptana.core.util.StringUtil;
 import com.aptana.editor.common.contentassist.CommonCompletionProposal;
 import com.aptana.editor.common.contentassist.CompletionProposalComparator;
@@ -133,7 +133,7 @@ public class CommonContentAssistProcessor implements IContentAssistProcessor, IC
 
 		if (getPreferenceNodeQualifier() != null)
 		{
-			EclipseUtil.instanceScope().getNode(getPreferenceNodeQualifier()).addPreferenceChangeListener(this);
+			InstanceScope.INSTANCE.getNode(getPreferenceNodeQualifier()).addPreferenceChangeListener(this);
 		}
 	}
 
@@ -488,7 +488,7 @@ public class CommonContentAssistProcessor implements IContentAssistProcessor, IC
 	{
 		if (getPreferenceNodeQualifier() != null)
 		{
-			EclipseUtil.instanceScope().getNode(getPreferenceNodeQualifier()).removePreferenceChangeListener(this);
+			InstanceScope.INSTANCE.getNode(getPreferenceNodeQualifier()).removePreferenceChangeListener(this);
 		}
 	}
 
@@ -814,13 +814,21 @@ public class CommonContentAssistProcessor implements IContentAssistProcessor, IC
 			{
 				if (displayString.toLowerCase().startsWith(prefix.toLowerCase()))
 				{
+					// Only change relevance if this new value is higher than old!
+					ICommonCompletionProposal common = (ICommonCompletionProposal) proposal;
 					if (displayString.startsWith(prefix))
 					{
-						((ICommonCompletionProposal) proposal).setRelevance(ICommonCompletionProposal.RELEVANCE_HIGH);
+						if (common.getRelevance() < ICommonCompletionProposal.RELEVANCE_HIGH)
+						{
+							common.setRelevance(ICommonCompletionProposal.RELEVANCE_HIGH);
+						}
 					}
 					else
 					{
-						((ICommonCompletionProposal) proposal).setRelevance(ICommonCompletionProposal.RELEVANCE_MEDIUM);
+						if (common.getRelevance() < ICommonCompletionProposal.RELEVANCE_MEDIUM)
+						{
+							common.setRelevance(ICommonCompletionProposal.RELEVANCE_MEDIUM);
+						}
 					}
 				}
 			}

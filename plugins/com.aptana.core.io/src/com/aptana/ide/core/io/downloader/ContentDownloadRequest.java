@@ -8,11 +8,11 @@
 package com.aptana.ide.core.io.downloader;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.text.MessageFormat;
+import java.io.OutputStream;
+import java.net.URI;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -21,14 +21,14 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.ecf.filetransfer.UserCancelledException;
+import org.eclipse.ecf.core.security.IConnectContext;
 import org.eclipse.osgi.util.NLS;
 
+import com.aptana.core.epl.downloader.ConnectionData;
 import com.aptana.core.epl.downloader.FileReader;
-import com.aptana.core.logging.IdeLog;
 import com.aptana.core.util.FileUtil;
+import com.aptana.core.util.StringUtil;
 import com.aptana.ide.core.io.CoreIOPlugin;
-import com.aptana.ide.core.io.IDebugScopes;
 
 /**
  * A single content download request.
@@ -37,19 +37,31 @@ import com.aptana.ide.core.io.IDebugScopes;
  */
 public class ContentDownloadRequest
 {
-	private URL url;
+	protected final URI uri;
 	private File saveTo;
 	private IStatus result;
+	private IConnectContext context;
 
-	public ContentDownloadRequest(URL url) throws CoreException
+	public ContentDownloadRequest(URI uri) throws CoreException
 	{
-		this(url, getTempFile(url));
+		this(uri, getTempFile(uri));
 	}
 
-	public ContentDownloadRequest(URL url, File saveTo)
+	public ContentDownloadRequest(URI uri, File saveTo)
 	{
-		this.url = url;
+		this(uri, saveTo, null);
+	}
+
+	public ContentDownloadRequest(URI uri, IConnectContext context) throws CoreException
+	{
+		this(uri, getTempFile(uri), context);
+	}
+
+	public ContentDownloadRequest(URI uri, File saveTo, IConnectContext context)
+	{
+		this.uri = uri;
 		this.saveTo = saveTo;
+		this.context = context;
 	}
 
 	public IStatus getResult()
@@ -78,8 +90,16 @@ public class ContentDownloadRequest
 
 	public void execute(IProgressMonitor monitor)
 	{
-		monitor.subTask(NLS.bind(Messages.ContentDownloadRequest_downloading, url.toString()));
-		IStatus status = download(monitor);
+		execute(null, monitor);
+	}
+
+	public void execute(ConnectionData data, IProgressMonitor monitor)
+	{
+		if (monitor != null)
+		{
+			monitor.subTask(NLS.bind(Messages.ContentDownloadRequest_downloading, uri.toString()));
+		}
+		IStatus status = download(data, monitor);
 		setResult(status);
 	}
 
@@ -89,20 +109,15 @@ public class ContentDownloadRequest
 	 * @param monitor
 	 * @return
 	 */
-	private IStatus download(IProgressMonitor monitor)
+	private IStatus download(ConnectionData data, IProgressMonitor monitor)
 	{
-		IStatus status = Status.OK_STATUS;
 		// perform the download
 		try
 		{
-			IdeLog.logInfo(CoreIOPlugin.getDefault(),
-					MessageFormat.format("Downloading {0} to {1}", this.url.toURI(), this.saveTo.getCanonicalPath()), //$NON-NLS-1$
-					IDebugScopes.DOWNLOAD);
-
 			// Use ECF FileTransferJob implementation to get the remote file.
-			FileReader reader = new FileReader(null);
-			FileOutputStream anOutputStream = new FileOutputStream(this.saveTo);
-			reader.readInto(this.url.toURI(), anOutputStream, 0, monitor);
+			FileReader reader = createReader(data);
+			OutputStream anOutputStream = createOutputStream(this.saveTo);
+			reader.readInto(this.uri, anOutputStream, 0, monitor);
 			// check that job ended ok - throw exceptions otherwise
 			IStatus result = reader.getResult();
 			if (result != null)
@@ -116,9 +131,6 @@ public class ContentDownloadRequest
 					throw new CoreException(result);
 				}
 			}
-
-			IdeLog.logInfo(CoreIOPlugin.getDefault(),
-					MessageFormat.format("File {0} downloaded sucessfully", this.url.toURI()), IDebugScopes.DOWNLOAD); //$NON-NLS-1$
 		}
 		catch (OperationCanceledException e)
 		{
@@ -126,9 +138,23 @@ public class ContentDownloadRequest
 		}
 		catch (Throwable t)
 		{
+			if (monitor != null && monitor.isCanceled())
+			{
+				return Status.CANCEL_STATUS;
+			}
 			return new Status(IStatus.ERROR, CoreIOPlugin.PLUGIN_ID, t.getMessage(), t);
 		}
-		return status;
+		return Status.OK_STATUS;
+	}
+
+	protected FileReader createReader(ConnectionData data)
+	{
+		return new FileReader(data, context);
+	}
+
+	protected OutputStream createOutputStream(File dest) throws FileNotFoundException
+	{
+		return new FileOutputStream(dest);
 	}
 
 	/**
@@ -139,23 +165,16 @@ public class ContentDownloadRequest
 	 * @return
 	 * @throws CoreException
 	 */
-	protected static File getTempFile(URL url) throws CoreException
+	protected static File getTempFile(URI uri) throws CoreException
 	{
-		String tempPath = FileUtil.getTempDirectory().toOSString();
-		try
+		IPath path = Path.fromOSString(uri.getPath());
+		String name = path.lastSegment();
+		if (!StringUtil.isEmpty(name))
 		{
-			IPath path = Path.fromOSString(url.toURI().getPath());
-			String name = path.lastSegment();
-			if (name != null && name.length() > 0)
-			{
-				File f = new File(tempPath, name);
-				f.deleteOnExit();
-				return f;
-			}
-		}
-		catch (URISyntaxException e)
-		{
-			IdeLog.logError(CoreIOPlugin.getDefault(), e);
+			String tempPath = FileUtil.getTempDirectory().toOSString();
+			File f = new File(tempPath, name);
+			f.deleteOnExit();
+			return f;
 		}
 
 		try

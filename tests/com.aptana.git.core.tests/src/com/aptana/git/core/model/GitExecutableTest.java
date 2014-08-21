@@ -7,13 +7,15 @@
  */
 package com.aptana.git.core.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
-
-import junit.framework.TestCase;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileInfo;
@@ -27,18 +29,23 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.jmock.Expectations;
 import org.jmock.Mockery;
+import org.jmock.lib.concurrent.Synchroniser;
 import org.jmock.lib.legacy.ClassImposteriser;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.osgi.framework.Version;
 
-import com.aptana.core.util.EclipseUtil;
+import com.aptana.core.util.FileUtil;
 import com.aptana.core.util.ProcessStatus;
 import com.aptana.git.core.GitPlugin;
 import com.aptana.git.core.IPreferenceConstants;
 
 @SuppressWarnings("nls")
-public class GitExecutableTest extends TestCase
+public class GitExecutableTest
 {
 	// FIXME This certainly won't work on Windows!
 	private static final String FAKE_GIT_1_5 = "test_files/fake_git_1.5.sh";
@@ -46,29 +53,29 @@ public class GitExecutableTest extends TestCase
 
 	private Mockery context;
 
-	@Override
-	protected void setUp() throws Exception
+	@Before
+	public void setUp() throws Exception
 	{
-		super.setUp();
 		context = new Mockery()
 		{
 			{
 				setImposteriser(ClassImposteriser.INSTANCE);
+				setThreadingPolicy(new Synchroniser());
 			}
 		};
 	}
 
-	@Override
-	protected void tearDown() throws Exception
+	@After
+	public void tearDown() throws Exception
 	{
 		GitExecutable.fgExecutable = null;
-		IEclipsePreferences prefs = EclipseUtil.instanceScope().getNode(GitPlugin.getPluginId());
+		IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(GitPlugin.getPluginId());
 		prefs.remove(IPreferenceConstants.GIT_EXECUTABLE_PATH);
 		prefs.flush();
 		context = null;
-		super.tearDown();
 	}
 
+	@Test
 	public void testAcceptBinary() throws Exception
 	{
 		URL url = makeURLForExecutableFile(new Path(FAKE_GIT_1_5));
@@ -103,11 +110,12 @@ public class GitExecutableTest extends TestCase
 	}
 
 	// Test that it picks up pref value for location above all else
+	@Test
 	public void testUsesPrefLocationFirst() throws Throwable
 	{
 		URL url = makeURLForExecutableFile(new Path(FAKE_GIT_1_6));
 
-		IEclipsePreferences prefs = EclipseUtil.instanceScope().getNode(GitPlugin.getPluginId());
+		IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(GitPlugin.getPluginId());
 		prefs.put(IPreferenceConstants.GIT_EXECUTABLE_PATH, url.getPath());
 		prefs.flush();
 
@@ -115,6 +123,7 @@ public class GitExecutableTest extends TestCase
 		assertEquals(Path.fromOSString(url.getPath()), executable.path());
 	}
 
+	@Test
 	public void testDetectsInStandardLocation() throws Throwable
 	{
 		GitExecutable executable = GitExecutable.instance();
@@ -128,17 +137,19 @@ public class GitExecutableTest extends TestCase
 	}
 
 	// Test that it reacts to changes in pref location
+	@Test
 	public void testReactsToPrefLocationChanges() throws Throwable
 	{
 		testUsesPrefLocationFirst();
 
-		IEclipsePreferences prefs = EclipseUtil.instanceScope().getNode(GitPlugin.getPluginId());
+		IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(GitPlugin.getPluginId());
 		prefs.remove(IPreferenceConstants.GIT_EXECUTABLE_PATH);
 		prefs.flush();
 
 		testDetectsInStandardLocation();
 	}
 
+	@Test
 	public void testCloneUsesProgressFlagOnOneDotSeven() throws Throwable
 	{
 		final String stdOutText = "stdout";
@@ -162,8 +173,7 @@ public class GitExecutableTest extends TestCase
 		});
 
 		final String sourceURI = "git@github.com:aptana/studio3.git";
-		final IPath dest = Path.fromOSString(new File(File.createTempFile("clone_dest", "tmp").getParent(),
-				"clone_dest").getAbsolutePath());
+		final IPath dest = FileUtil.getTempDirectory().append("clone_dest");
 		IPath gitPath = Path.fromPortableString("/fake/git/path");
 		GitExecutable executable = new GitExecutable(gitPath)
 		{
@@ -197,6 +207,7 @@ public class GitExecutableTest extends TestCase
 		context.assertIsSatisfied();
 	}
 
+	@Test
 	public void testCloneUsesProperArgsForShallow() throws Throwable
 	{
 		final String stdOutText = "stdout";
@@ -220,8 +231,7 @@ public class GitExecutableTest extends TestCase
 		});
 
 		final String sourceURI = "git@github.com:aptana/studio3.git";
-		final IPath dest = Path.fromOSString(new File(File.createTempFile("clone_dest", "tmp").getParent(),
-				"clone_dest").getAbsolutePath());
+		final IPath dest = FileUtil.getTempDirectory().append("clone_dest");
 		IPath gitPath = Path.fromPortableString("/fake/git/path");
 		GitExecutable executable = new GitExecutable(gitPath)
 		{
@@ -256,6 +266,7 @@ public class GitExecutableTest extends TestCase
 		context.assertIsSatisfied();
 	}
 
+	@Test
 	public void testCloneRunnableProvidesProgress() throws Throwable
 	{
 		TestProgressMonitor monitor = new TestProgressMonitor();
@@ -304,6 +315,7 @@ public class GitExecutableTest extends TestCase
 		context.assertIsSatisfied();
 	}
 
+	@Test
 	public void testAPSTUD4596() throws Throwable
 	{
 		URL url = makeURLForExecutableFile(new Path("test_files/apstud4596_git.sh"));
@@ -315,6 +327,7 @@ public class GitExecutableTest extends TestCase
 		assertEquals(Version.parseVersion("1.7.7.5"), exe.version());
 	}
 
+	@Test
 	public void testMsysgitVersionString() throws Throwable
 	{
 		URL url = makeURLForExecutableFile(new Path("test_files/msysgit.sh"));
@@ -326,6 +339,7 @@ public class GitExecutableTest extends TestCase
 		assertEquals(Version.parseVersion("1.6.4.msysgit_0"), exe.version());
 	}
 
+	@Test
 	public void testMsysgitVersionStringWithTooManySegments() throws Throwable
 	{
 		URL url = makeURLForExecutableFile(new Path("test_files/1.7.7.5.msysgit.0.sh"));

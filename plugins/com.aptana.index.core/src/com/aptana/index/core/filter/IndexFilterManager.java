@@ -30,6 +30,7 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.osgi.service.prefs.BackingStoreException;
 
 import com.aptana.core.IFilter;
@@ -37,7 +38,6 @@ import com.aptana.core.IMap;
 import com.aptana.core.io.efs.EFSUtils;
 import com.aptana.core.logging.IdeLog;
 import com.aptana.core.util.CollectionsUtil;
-import com.aptana.core.util.EclipseUtil;
 import com.aptana.core.util.StringUtil;
 import com.aptana.index.core.IPreferenceConstants;
 import com.aptana.index.core.IndexPlugin;
@@ -48,7 +48,6 @@ public class IndexFilterManager
 	/**
 	 * Unfortunately, we stored filters in the ui plugin prefs...
 	 */
-	private static final String PREF_NODE = "com.aptana.index.core.ui"; //$NON-NLS-1$
 	private static IndexFilterManager INSTANCE;
 
 	/**
@@ -128,7 +127,7 @@ public class IndexFilterManager
 		String value = StringUtil.join(ITEM_DELIMITER, uris);
 
 		// now save the file store list
-		IEclipsePreferences prefs = EclipseUtil.instanceScope().getNode(PREF_NODE);
+		IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(IndexPlugin.PLUGIN_ID);
 		prefs.put(IPreferenceConstants.FILTERED_INDEX_URIS, value);
 		try
 		{
@@ -253,8 +252,8 @@ public class IndexFilterManager
 	 */
 	private Set<IFileStore> loadFilteredItems()
 	{
-		String uris = Platform.getPreferencesService().getString(PREF_NODE, IPreferenceConstants.FILTERED_INDEX_URIS,
-				null, null);
+		String uris = Platform.getPreferencesService().getString(IndexPlugin.PLUGIN_ID,
+				IPreferenceConstants.FILTERED_INDEX_URIS, null, null);
 		if (StringUtil.isEmpty(uris))
 		{
 			// Don't return emptySet because we expect to be able to modify the return value

@@ -33,9 +33,11 @@ public class RevertHandler extends AbstractStagingHandler
 		final Set<IResource> changedResources = new HashSet<IResource>();
 		for (IResource resource : getSelectedResources())
 		{
+			File file = new File(resource.getLocationURI());
 			for (ChangedFile changedFile : changedFiles)
 			{
-				if (new File(resource.getLocationURI()).getAbsolutePath().endsWith(changedFile.getPath()))
+				// FIXME We should be able to ask for the full path for the changed file by appending to the git repo's working directory!
+				if (file.getAbsolutePath().endsWith(changedFile.getRelativePath().toOSString()))
 				{
 					changedResources.add(resource);
 					break;

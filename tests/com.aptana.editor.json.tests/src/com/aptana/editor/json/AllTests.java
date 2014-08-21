@@ -7,23 +7,21 @@
  */
 package com.aptana.editor.json;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
+@RunWith(Suite.class)
+//@formatter:off
+@SuiteClasses({
+	JSONSourcePartitionerScannerTest.class
+})
+//@formatter:on
 /**
  * @author klindsey
  *
  */
 public class AllTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(AllTests.class.getName());
-		//$JUnit-BEGIN$
-		suite.addTestSuite(JSONSourcePartitionerScannerTest.class);
-		//$JUnit-END$
-		return suite;
-	}
 
 }

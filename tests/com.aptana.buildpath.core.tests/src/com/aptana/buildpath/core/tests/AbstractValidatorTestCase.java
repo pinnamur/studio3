@@ -7,6 +7,10 @@
  */
 package com.aptana.buildpath.core.tests;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.net.URI;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,56 +18,48 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.TestCase;
-
-import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.junit.After;
+import org.junit.Before;
 
 import com.aptana.core.IFilter;
 import com.aptana.core.IMap;
 import com.aptana.core.build.IBuildParticipant;
 import com.aptana.core.build.IProblem;
-import com.aptana.core.tests.TestProject;
+import com.aptana.core.build.ReconcileContext;
 import com.aptana.core.util.CollectionsUtil;
 import com.aptana.core.util.StringUtil;
 import com.aptana.index.core.build.BuildContext;
 import com.aptana.parsing.IParseState;
 
-public abstract class AbstractValidatorTestCase extends TestCase
+public abstract class AbstractValidatorTestCase
 {
 
 	protected IBuildParticipant fValidator;
 
-	@Override
-	protected void setUp() throws Exception
+	@Before
+	public void setUp() throws Exception
 	{
-		super.setUp();
 		fValidator = createValidator();
 	}
 
-	@Override
-	protected void tearDown() throws Exception
+	@After
+	public void tearDown() throws Exception
 	{
 		if (fValidator != null)
 		{
 			fValidator.restoreDefaults();
 			fValidator = null;
 		}
-		super.tearDown();
 	}
 
 	protected abstract IBuildParticipant createValidator();
 
 	protected List<IProblem> getParseErrors(String source, IParseState ps, String markerType) throws CoreException
 	{
-		TestProject project = new TestProject("Test", new String[] { "com.aptana.projects.webnature" });
-		IFile file = project.createFile("parseErrorTest." + getFileExtension(), source);
-
-		BuildContext context = new BuildContext(file);
+		BuildContext context = new ReconcileContext(getContentType(), URI.create("file:/" + markerType), source);
 		fValidator.buildFile(context, new NullProgressMonitor());
-
-		project.delete();
 
 		Map<String, Collection<IProblem>> problems = context.getProblems();
 		Collection<IProblem> daProblems = problems.get(markerType);
@@ -74,7 +70,9 @@ public abstract class AbstractValidatorTestCase extends TestCase
 		return new ArrayList<IProblem>(daProblems);
 	}
 
-	protected IProblem assertContains(List<IProblem> items, String message)
+	protected abstract String getContentType();
+
+	public static IProblem assertContains(List<IProblem> items, String message)
 	{
 		for (IProblem item : items)
 		{
@@ -95,7 +93,7 @@ public abstract class AbstractValidatorTestCase extends TestCase
 		return null;
 	}
 
-	protected void assertProblem(IProblem item, String msg, int line, int severity, int offset)
+	public static void assertProblem(IProblem item, String msg, int line, int severity, int offset)
 	{
 		assertEquals("message", msg, item.getMessage());
 		assertEquals("line", line, item.getLineNumber());
@@ -103,20 +101,20 @@ public abstract class AbstractValidatorTestCase extends TestCase
 		assertEquals("offset", offset, item.getOffset());
 	}
 
-	protected void assertProblem(IProblem item, String msg, int line, int severity, int offset, int length)
+	public static void assertProblem(IProblem item, String msg, int line, int severity, int offset, int length)
 	{
 		assertProblem(item, msg, line, severity, offset);
 		assertEquals("length", length, item.getLength());
 	}
 
-	protected void assertContainsProblem(List<IProblem> items, String msg, int severity, int line, int offset,
+	public static void assertContainsProblem(List<IProblem> items, String msg, int severity, int line, int offset,
 			int length)
 	{
 		IProblem problem = assertContains(items, msg);
 		assertProblem(problem, msg, line, severity, offset, length);
 	}
 
-	protected List<IProblem> getProblems(List<IProblem> items, final String message)
+	public static List<IProblem> getProblems(List<IProblem> items, final String message)
 	{
 		return CollectionsUtil.filter(items, new IFilter<IProblem>()
 		{
@@ -127,7 +125,7 @@ public abstract class AbstractValidatorTestCase extends TestCase
 		});
 	}
 
-	protected void assertDoesntContain(List<IProblem> items, String message)
+	public static void assertDoesntContain(List<IProblem> items, String message)
 	{
 		for (IProblem item : items)
 		{
@@ -139,13 +137,13 @@ public abstract class AbstractValidatorTestCase extends TestCase
 		}
 	}
 
-	protected void assertProblemExists(List<IProblem> items, String msg, int line, int severity, int offset)
+	public static void assertProblemExists(List<IProblem> items, String msg, int line, int severity, int offset)
 	{
 		IProblem item = assertContains(items, msg);
 		assertProblem(item, msg, line, severity, offset);
 	}
 
-	protected void assertCountOfProblems(List<IProblem> items, int count, final String msg)
+	public static void assertCountOfProblems(List<IProblem> items, int count, final String msg)
 	{
 		List<IProblem> filtered = CollectionsUtil.filter(items, new IFilter<IProblem>()
 		{

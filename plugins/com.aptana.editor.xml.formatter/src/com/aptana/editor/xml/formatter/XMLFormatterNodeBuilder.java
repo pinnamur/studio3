@@ -19,7 +19,7 @@ import com.aptana.formatter.nodes.FormatterTextNode;
 import com.aptana.formatter.nodes.IFormatterContainerNode;
 import com.aptana.parsing.ast.IParseNode;
 import com.aptana.parsing.ast.IParseRootNode;
-import com.aptana.parsing.lexer.IRange;
+import com.aptana.xml.core.parsing.ast.XMLCDATANode;
 import com.aptana.xml.core.parsing.ast.XMLElementNode;
 import com.aptana.xml.core.parsing.ast.XMLNode;
 import com.aptana.xml.core.parsing.ast.XMLNodeType;
@@ -124,21 +124,27 @@ public class XMLFormatterNodeBuilder extends AbstractFormatterNodeBuilder
 	private FormatterBlockWithBeginEndNode pushFormatterElementNode(XMLElementNode node)
 	{
 		String type = node.getName().toLowerCase();
-		FormatterBlockWithBeginEndNode formatterNode;
-		IRange beginNodeRange = node.getNameNode().getNameRange();
-		int endOffset = getOpenTagOffset(node.getEndingOffset(), document);
 
-		formatterNode = new FormatterXMLElementNode(document, type, node.hasChildren());
-		formatterNode.setBegin(createTextNode(document, beginNodeRange.getStartingOffset(),
-				beginNodeRange.getEndingOffset() + 1));
+		boolean hasNonTextChildren = false;
+		IParseNode[] children = node.getChildren();
+		for (IParseNode child : children)
+		{
+			if (!(child instanceof XMLCDATANode))
+			{
+				hasNonTextChildren = true;
+			}
+		}
+
+		FormatterBlockWithBeginEndNode formatterNode = new FormatterXMLElementNode(document, type, hasNonTextChildren);
+		formatterNode.setBegin(createTextNode(document, node.getStartingOffset(), node.getStartTagEndOffset() + 1));
 		push(formatterNode);
 
 		// create a content node so we can move it to a single line for exclusions (only when it doesn't have child
 		// nodes and there is content)
-
+		int endOffset = getOpenTagOffset(node.getEndingOffset(), document);
 		int previousCloseTagOffset = getPreviousCloseTagOffset(endOffset, document);
 
-		if (node.getChildCount() == 0)
+		if (node.getChildCount() <= 1) // single child means text content, zero means no text
 		{
 
 			int textStartOffset = getBeginWithoutWhiteSpaces(previousCloseTagOffset + 1, document);
@@ -169,7 +175,7 @@ public class XMLFormatterNodeBuilder extends AbstractFormatterNodeBuilder
 		// Recursively call this method till we are done with all the children under this node.
 		addNodes(node.getChildren());
 
-		if (node.getChildCount() == 0)
+		if (node.getChildCount() <= 1) // single child means text content, zero means no text
 		{
 			checkedPop(formatterNode, -1);
 		}

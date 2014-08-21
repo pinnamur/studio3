@@ -11,6 +11,7 @@ import java.util.EnumSet;
 
 import beaver.Symbol;
 
+import com.aptana.js.core.parsing.ast.JSArgumentsNode;
 import com.aptana.js.core.parsing.ast.JSArrayNode;
 import com.aptana.js.core.parsing.ast.JSBinaryBooleanOperatorNode;
 import com.aptana.js.core.parsing.ast.JSBreakNode;
@@ -907,6 +908,25 @@ public class JSLocationIdentifier extends JSTreeWalker
 		}
 	}
 
+	@Override
+	public void visit(JSArgumentsNode node)
+	{
+		if (node.hasChildren())
+		{
+			for (IParseNode child : node)
+			{
+				if (child.contains(this._offset))
+				{
+					// If any child overlaps offset, use it's location type
+					this.setType(child);
+					return;
+				}
+			}
+		}
+		// otherwise assume in parameters
+		this.setType(LocationType.IN_ARGUMENTS);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see com.aptana.editor.js.parsing.ast.JSTreeWalker#visit(com.aptana.editor.js.parsing.ast.JSInvokeNode)
@@ -976,18 +996,32 @@ public class JSLocationIdentifier extends JSTreeWalker
 		{
 			Symbol colon = node.getColon();
 			IParseNode value = node.getValue();
-
-			if (this._offset < colon.getStart())
+			if (colon != null)
 			{
-				this.setType(LocationType.IN_OBJECT_LITERAL_PROPERTY);
+				if (this._offset < colon.getStart())
+				{
+					this.setType(LocationType.IN_OBJECT_LITERAL_PROPERTY);
+				}
+				else if (this._offset < value.getStartingOffset())
+				{
+					this.setType(LocationType.IN_GLOBAL);
+				}
+				else if (value.contains(this._offset))
+				{
+					this.setType(value);
+				}
 			}
-			else if (this._offset < value.getStartingOffset())
+			else
 			{
-				this.setType(LocationType.IN_GLOBAL);
-			}
-			else if (value.contains(this._offset))
-			{
-				this.setType(value);
+				// get / set
+				if (value.contains(this._offset))
+				{
+					this.setType(value);
+				}
+				else
+				{
+					this.setType(LocationType.NONE);
+				}
 			}
 		}
 	}

@@ -7,18 +7,17 @@
  */
 package com.aptana.editor.html.formatter.tests;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
+@RunWith(Suite.class)
+//@formatter:off
+@SuiteClasses({
+	FormattingTests.class
+})
+//@formatter:on
 public class AllTests
 {
 
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite("Test for com.aptana.editor.html.formatter.tests");
-		// $JUnit-BEGIN$
-		suite.addTest(new FormattingTests().suite());
-		// $JUnit-END$
-		return suite;
-	}
 }

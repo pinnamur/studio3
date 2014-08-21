@@ -1,5 +1,8 @@
 package com.aptana.core.io.tests;
 
+import org.junit.After;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import java.io.File;
 import java.net.URL;
 import java.util.List;
@@ -16,16 +19,17 @@ import com.aptana.ide.core.io.CoreIOPlugin;
 import com.aptana.ide.core.io.IConnectionPoint;
 import com.aptana.ide.core.io.IConnectionPointManager;
 
-public class ConnectionPointManagerTest extends TestCase
+public class ConnectionPointManagerTest
 {
 
 	private static final String BUNDLE_ID = "com.aptana.core.io.tests";
 	private static final String RESOURCE_DIR = "resources";
 
-	@Override
-	protected void tearDown() throws Exception
+//	@Override
+	@After
+	public void tearDown() throws Exception
 	{
-		super.tearDown();
+//		super.tearDown();
 
 		IConnectionPointManager connectionPointManager = CoreIOPlugin.getConnectionPointManager();
 		IConnectionPoint[] connectionPoints = connectionPointManager.getConnectionPoints();
@@ -41,8 +45,8 @@ public class ConnectionPointManagerTest extends TestCase
 		File testInputFile = new File(resourceFolder, "testConnections.xml");
 		List<IConnectionPoint> newConnections = CoreIOPlugin.getConnectionPointManager().addConnectionsFrom(
 				Path.fromOSString(testInputFile.getAbsolutePath()));
-		assertEquals(5, newConnections.size());
-		assertEquals(5, CoreIOPlugin.getConnectionPointManager().getConnectionPoints().length);
+		assertEquals(4, newConnections.size());
+		assertEquals(4, CoreIOPlugin.getConnectionPointManager().getConnectionPoints().length);
 
 		for (IConnectionPoint point : newConnections)
 		{
@@ -61,11 +65,6 @@ public class ConnectionPointManagerTest extends TestCase
 				assertEquals("sftp", ((ConnectionPoint) point).getType());
 				assertEquals("89deecbf-0c19-44e4-b2c6-549b8d0a12e6", point.getId());
 			}
-			else if (point.getName().equals("S3"))
-			{
-				assertEquals("s3", ((ConnectionPoint) point).getType());
-				assertEquals("ab96e9dc-b38b-47bf-9afd-fd753f73d4b3", point.getId());
-			}
 			else if (point.getName().equals("Sample"))
 			{
 				assertEquals("local", ((ConnectionPoint) point).getType());
@@ -78,6 +77,7 @@ public class ConnectionPointManagerTest extends TestCase
 		}
 	}
 
+	@Test
 	public void testEmptyConnections()
 	{
 		URL resourceURL = Platform.getBundle(BUNDLE_ID).getEntry(RESOURCE_DIR);

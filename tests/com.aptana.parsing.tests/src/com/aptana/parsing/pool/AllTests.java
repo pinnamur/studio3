@@ -7,20 +7,13 @@
  */
 package com.aptana.parsing.pool;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
-@SuppressWarnings("nls")
+@RunWith(Suite.class)
+@SuiteClasses({ ParsingPoolFactoryTest.class, })
 public class AllTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite("Test for com.aptana.parsing.pool");
-		//$JUnit-BEGIN$
-		suite.addTestSuite(ParsingPoolFactoryTest.class);
-		//$JUnit-END$
-		return suite;
-	}
 
 }

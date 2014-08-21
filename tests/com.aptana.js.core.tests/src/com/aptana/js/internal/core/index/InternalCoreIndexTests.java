@@ -1,21 +1,11 @@
 package com.aptana.js.internal.core.index;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
-public class InternalCoreIndexTests extends TestCase
+@RunWith(Suite.class)
+@SuiteClasses({ JSIndexTest.class, JSMetadataIndexWriterTest.class, MetadataTest.class, JSCAParserTest.class })
+public class InternalCoreIndexTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(InternalCoreIndexTests.class.getName());
-		// $JUnit-BEGIN$
-		suite.addTestSuite(JSIndexTest.class);
-		suite.addTestSuite(JSMetadataIndexWriterTest.class);
-		suite.addTestSuite(MetadataTest.class);
-		// $JUnit-END$
-		return suite;
-	}
-
 }

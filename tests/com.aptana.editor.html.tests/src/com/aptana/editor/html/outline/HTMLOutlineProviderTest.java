@@ -7,23 +7,27 @@
  */
 package com.aptana.editor.html.outline;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
 
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.aptana.core.util.EclipseUtil;
 import com.aptana.css.core.ICSSConstants;
 import com.aptana.css.core.parsing.ast.ICSSNodeTypes;
 import com.aptana.editor.common.outline.CommonOutlineItem;
 import com.aptana.editor.html.HTMLPlugin;
+import com.aptana.editor.html.core.preferences.IPreferenceConstants;
 import com.aptana.editor.html.parsing.HTMLParseState;
 import com.aptana.editor.html.parsing.HTMLParser;
 import com.aptana.editor.html.preferences.HTMLPreferenceUtil;
-import com.aptana.editor.html.preferences.IPreferenceConstants;
 import com.aptana.parsing.ast.IParseNode;
 import com.aptana.parsing.ast.IParseRootNode;
 
-public class HTMLOutlineProviderTest extends TestCase
+public class HTMLOutlineProviderTest
 {
 
 	private HTMLOutlineLabelProvider fLabelProvider;
@@ -32,26 +36,24 @@ public class HTMLOutlineProviderTest extends TestCase
 	private HTMLParser fParser;
 	private HTMLParseState fParseState;
 
-	@Override
-	protected void setUp() throws Exception
+	@Before
+	public void setUp() throws Exception
 	{
-		super.setUp();
-
 		fLabelProvider = new HTMLOutlineLabelProvider();
 		fContentProvider = new HTMLOutlineContentProvider(null);
 		fParser = new HTMLParser();
 	}
 
-	@Override
-	protected void tearDown() throws Exception
+	@After
+	public void tearDown() throws Exception
 	{
 		fLabelProvider = null;
 		fContentProvider = null;
 		fParser = null;
 		fParseState = null;
-		super.tearDown();
 	}
 
+	@Test
 	public void testBasicOutline() throws Exception
 	{
 		String source = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">\n"
@@ -70,6 +72,7 @@ public class HTMLOutlineProviderTest extends TestCase
 		assertEquals("body", fLabelProvider.getText(secondLevel[1]));
 	}
 
+	@Test
 	public void testIdAndClassAttributes() throws Exception
 	{
 		String source = "<div id=\"content\" class=\"name\"></div>";
@@ -81,6 +84,7 @@ public class HTMLOutlineProviderTest extends TestCase
 		assertEquals("div#content.name", fLabelProvider.getText(outlineResult[0]));
 	}
 
+	@Test
 	public void testSrcAttribute() throws Exception
 	{
 		String source = "<script src=\"test.js\">";
@@ -92,6 +96,7 @@ public class HTMLOutlineProviderTest extends TestCase
 		assertEquals("script test.js", fLabelProvider.getText(outlineResult[0]));
 	}
 
+	@Test
 	public void testHrefAttribute() throws Exception
 	{
 		String source = "<link href=\"stylesheet.css\">";
@@ -103,6 +108,7 @@ public class HTMLOutlineProviderTest extends TestCase
 		assertEquals("link stylesheet.css", fLabelProvider.getText(outlineResult[0]));
 	}
 
+	@Test
 	public void testCommentFilter() throws Exception
 	{
 		String source = "<!-- this is a comment -->";
@@ -113,20 +119,29 @@ public class HTMLOutlineProviderTest extends TestCase
 		assertEquals(0, outlineResult.length);
 	}
 
+	@Test
 	public void testCustomAttributeFromPreference() throws Exception
 	{
-		String source = "<meta charset=\"utf-8\">";
-		fParseState = new HTMLParseState(source);
-		IParseNode astRoot = parse();
+		IEclipsePreferences prefs = InstanceScope.INSTANCE.getNode(HTMLPlugin.PLUGIN_ID);
+		try
+		{
+			String source = "<meta charset=\"utf-8\">";
+			fParseState = new HTMLParseState(source);
+			IParseNode astRoot = parse();
 
-		IEclipsePreferences prefs = EclipseUtil.instanceScope().getNode(HTMLPlugin.PLUGIN_ID);
-		prefs.put(IPreferenceConstants.HTML_OUTLINE_TAG_ATTRIBUTES_TO_SHOW, "charset");
+			prefs.put(IPreferenceConstants.HTML_OUTLINE_TAG_ATTRIBUTES_TO_SHOW, "charset");
 
-		Object[] outlineResult = fContentProvider.getElements(astRoot);
-		assertEquals(1, outlineResult.length);
-		assertEquals("meta utf-8", fLabelProvider.getText(outlineResult[0]));
+			Object[] outlineResult = fContentProvider.getElements(astRoot);
+			assertEquals(1, outlineResult.length);
+			assertEquals("meta utf-8", fLabelProvider.getText(outlineResult[0]));
+		}
+		finally
+		{
+			prefs.remove(IPreferenceConstants.HTML_OUTLINE_TAG_ATTRIBUTES_TO_SHOW);
+		}
 	}
 
+	@Test
 	public void testShowTextNode() throws Exception
 	{
 		String source = "some texts";
@@ -143,6 +158,7 @@ public class HTMLOutlineProviderTest extends TestCase
 		assertEquals("some texts", fLabelProvider.getText(outlineResult[0]));
 	}
 
+	@Test
 	public void testInlineCSS() throws Exception
 	{
 		String source = "<td style=\"color: red;\"></td>";
@@ -163,6 +179,7 @@ public class HTMLOutlineProviderTest extends TestCase
 		assertEquals(21, cssNode.getEndingOffset());
 	}
 
+	@Test
 	public void testAPSTUD4178() throws Exception
 	{
 		String source = "<script>\n(function() {\nvar foo = function() {};\nfoo.bar = function() {};\n})();\n</script>";

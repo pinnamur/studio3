@@ -27,7 +27,7 @@ public class FileUtil
 	/**
 	 * The newline separator character
 	 */
-	public static String NEW_LINE = System.getProperty("line.separator"); //$NON-NLS-1$
+	public static final String NEW_LINE = System.getProperty("line.separator"); //$NON-NLS-1$
 
 	private FileUtil()
 	{
@@ -68,6 +68,19 @@ public class FileUtil
 			canonical = new File(canonicalDir, file.getName());
 		}
 		return !canonical.getCanonicalFile().equals(canonical.getAbsoluteFile());
+	}
+
+	/**
+	 * Returns true if the given file is a zip archive.
+	 * 
+	 * @param file
+	 * @return
+	 */
+	public static boolean isZipFile(File file)
+	{
+		String filePath = file.getAbsolutePath();
+		// TODO: should be generic to other archive formats ?
+		return filePath.toLowerCase().endsWith(".zip"); //$NON-NLS-1$
 	}
 
 	/**
@@ -333,6 +346,10 @@ public class FileUtil
 				return fileExtension.equals(extension);
 			}
 		});
+		if (childFiles == null)
+		{
+			return null;
+		}
 		for (File childFile : childFiles)
 		{
 			String extension = getExtension(childFile.getName());
@@ -367,7 +384,7 @@ public class FileUtil
 		if (all != group)
 		{
 			// If group and all permissions don't match, force running chmod, since Java 6 APIs aren't granular enough
-			return ProcessUtil.runInBackground("chmod", null, permString, file.getAbsolutePath()); //$NON-NLS-1$
+			return new ProcessRunner().runInBackground("chmod", permString, file.getAbsolutePath()); //$NON-NLS-1$
 		}
 
 		// Set 'all' permissions first, then we can override owner permissions later if they're not the same.
@@ -414,6 +431,84 @@ public class FileUtil
 			return result.substring(3); // chop off leading "100"
 		}
 
-		return ProcessUtil.outputForCommand("stat", null, "-c", "%a", filepath.toOSString()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		String result = ProcessUtil.outputForCommand("stat", null, "-c", "%a", filepath.toOSString()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		return StringUtil.pad(result, 3, '0');
+	}
+
+	/**
+	 * Returns true if the file doesn't exist, false if it is not a directory. Otherwise checks if directory has any
+	 * files/subdirs.
+	 * 
+	 * @param dir
+	 * @return
+	 */
+	public static boolean isEmptyDir(File dir)
+	{
+		if (!dir.exists())
+		{
+			return true;
+		}
+		if (!dir.isDirectory())
+		{
+			return false;
+		}
+		return dir.listFiles().length == 0;
+	}
+
+	/**
+	 * Creates a symlink or shortcut folder.
+	 * 
+	 * @param symLinkName
+	 * @param sourcePath
+	 * @param targetPath
+	 * @return
+	 */
+	public static IStatus createSymlink(String symLinkName, IPath sourcePath, IPath targetPath)
+	{
+		if (PlatformUtil.isMac() || PlatformUtil.isLinux())
+		{
+			return new ProcessRunner().runInBackground(sourcePath, "ln", "-s", targetPath.toOSString(), symLinkName); //$NON-NLS-1$ //$NON-NLS-2$
+		}
+		else if (PlatformUtil.isWindows())
+		{
+			return new ProcessRunner()
+					.runInBackground(sourcePath, "mklink", "/D", symLinkName, targetPath.toOSString()); //$NON-NLS-1$ //$NON-NLS-2$
+		}
+		return Status.CANCEL_STATUS;
+	}
+
+	/**
+	 * this is actually just an optimistic heuristic - should be named isThereHopeThatCanCreateSubdir() as probably
+	 * there is no 100% reliable way to check that in Java for Windows
+	 * 
+	 * @param parent
+	 * @return
+	 */
+	public static boolean canCreateSubdir(File parent)
+	{
+		if (parent == null)
+		{
+			return true;
+		}
+		if (parent.exists())
+		{
+			return parent.isDirectory() && parent.canWrite();
+		}
+		return canCreateSubdir(parent.getParentFile());
+	}
+
+	/**
+	 * Wraps {@link File#createTempFile(String, String)} and marks the file to be deleted on JVM exit.
+	 * 
+	 * @param prefix
+	 * @param suffix
+	 * @return
+	 * @throws IOException
+	 */
+	public static File createTempFile(String prefix, String suffix) throws IOException
+	{
+		File f = File.createTempFile(prefix, suffix);
+		f.deleteOnExit();
+		return f;
 	}
 }

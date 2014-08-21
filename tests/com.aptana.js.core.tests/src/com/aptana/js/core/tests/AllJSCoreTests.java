@@ -7,40 +7,27 @@
  */
 package com.aptana.js.core.tests;
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
 import com.aptana.js.core.build.CoreBuildTests;
 import com.aptana.js.core.index.JSIndexQueryHelperTest;
 import com.aptana.js.core.inferencing.CoreInferencingTests;
-import com.aptana.js.core.model.ReturnTypeElementTest;
+import com.aptana.js.core.model.CoreModelTests;
 import com.aptana.js.core.parsing.CoreParsingTests;
 import com.aptana.js.internal.core.build.InternalCoreBuildTests;
 import com.aptana.js.internal.core.index.InternalCoreIndexTests;
 import com.aptana.js.internal.core.inferencing.InternalCoreInferencingTests;
+import com.aptana.js.internal.core.node.InternalCoreNodeTests;
 import com.aptana.js.internal.core.parsing.InternalCoreParsingTests;
 import com.aptana.js.internal.core.parsing.sdoc.InternalCoreParsingSDocTests;
 
-public class AllJSCoreTests extends TestCase
+@RunWith(Suite.class)
+@SuiteClasses({ CoreBuildTests.class, JSIndexQueryHelperTest.class, CoreInferencingTests.class, CoreParsingTests.class,
+		InternalCoreBuildTests.class, InternalCoreIndexTests.class, InternalCoreInferencingTests.class,
+		InternalCoreParsingTests.class, InternalCoreParsingSDocTests.class, CoreModelTests.class,
+		InternalCoreNodeTests.class })
+public class AllJSCoreTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(AllJSCoreTests.class.getName());
-		// $JUnit-BEGIN$
-		suite.addTest(CoreBuildTests.suite());
-		suite.addTestSuite(JSIndexQueryHelperTest.class);
-		suite.addTest(CoreInferencingTests.suite());
-		suite.addTest(CoreParsingTests.suite());
-		suite.addTest(InternalCoreBuildTests.suite());
-		suite.addTest(InternalCoreIndexTests.suite());
-		suite.addTest(InternalCoreInferencingTests.suite());
-		suite.addTest(InternalCoreParsingTests.suite());
-		suite.addTest(InternalCoreParsingSDocTests.suite());
-		suite.addTestSuite(ReturnTypeElementTest.class);
-		// $JUnit-END$
-		return suite;
-	}
-
 }

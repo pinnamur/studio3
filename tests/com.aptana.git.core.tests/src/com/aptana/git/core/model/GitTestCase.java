@@ -1,45 +1,46 @@
 package com.aptana.git.core.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.text.MessageFormat;
 import java.util.List;
-
-import junit.framework.TestCase;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.junit.After;
 
 import com.aptana.core.util.FileUtil;
 import com.aptana.git.core.GitPlugin;
 import com.aptana.git.core.model.ChangedFile.Status;
 
-public abstract class GitTestCase extends TestCase
+public abstract class GitTestCase
 {
 
 	private GitRepository fRepo;
 	private IPath fPath;
 
-	@Override
-	protected void tearDown() throws Exception
+	@After
+	public void tearDown() throws Exception
 	{
-		try
+		if (fRepo != null)
 		{
-			if (fRepo != null)
+			File generatedRepo = fRepo.workingDirectory().toFile();
+			if (generatedRepo.exists())
 			{
-				File generatedRepo = fRepo.workingDirectory().toFile();
-				if (generatedRepo.exists())
-				{
-					delete(generatedRepo);
-				}
-				fRepo = null;
+				delete(generatedRepo);
 			}
-			fPath = null;
+			fRepo = null;
 		}
-		finally
+		if (fPath != null)
 		{
-			super.tearDown();
+			delete(fPath.toFile());
+			fPath = null;
 		}
 	}
 
@@ -100,14 +101,19 @@ public abstract class GitTestCase extends TestCase
 		GitRepository repo = getRepo();
 		try
 		{
-			repo.waitForWrite();
-			assertTrue("Failed to commit", index.commit(commitMessage));
+			// Aquiring the write lock before commit might cause deadlock with a git refresh job that is already
+			// triggered (due to resource changes). After the commit is done, it refreshes and that requires the write
+			// lock.
+
+			// repo.waitForWrite();
+			IStatus status = index.commit(commitMessage);
+			assertTrue("Failed to commit: " + status.getMessage(), status.isOK());
 			assertTrue("After a commit, the repository changed file listing should be empty but is not", index
 					.changedFiles().isEmpty());
 		}
 		finally
 		{
-			repo.exitWriteProcess();
+			// repo.exitWriteProcess();
 		}
 	}
 
@@ -244,16 +250,7 @@ public abstract class GitTestCase extends TestCase
 		{
 			return;
 		}
-		File[] children = generatedRepo.listFiles();
-		if (children != null)
-		{
-			for (File child : children)
-			{
-				delete(child);
-			}
-		}
-
-		if (!generatedRepo.delete())
+		if (!FileUtil.deleteRecursively(generatedRepo))
 		{
 			generatedRepo.deleteOnExit();
 		}

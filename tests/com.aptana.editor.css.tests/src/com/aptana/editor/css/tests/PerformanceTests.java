@@ -7,37 +7,39 @@
  */
 package com.aptana.editor.css.tests;
 
+import org.junit.runners.Suite.SuiteClasses;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 import java.text.MessageFormat;
 
 import junit.framework.Test;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
 
-import com.aptana.core.logging.IdeLog;
 import com.aptana.editor.css.CSSCodeScannerPerformanceTest;
-import com.aptana.editor.css.CSSPlugin;
 import com.aptana.editor.css.tests.performance.OpenCSSEditorTest;
 
+@RunWith(Suite.class)
+@SuiteClasses({CSSCodeScannerPerformanceTest.class, OpenCSSEditorTest.class, })
 public class PerformanceTests
 {
 
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite("Performance Tests for com.aptana.editor.css plugin")
-		{
-			@Override
-			public void runTest(Test test, TestResult result)
-			{
-				String msg = MessageFormat.format("Running test: {0}", test.toString());
-				IdeLog.logError(CSSPlugin.getDefault(), msg);
-				System.out.println(msg);
-				super.runTest(test, result);
-			}
-		};
-		// $JUnit-BEGIN$
-		suite.addTestSuite(CSSCodeScannerPerformanceTest.class);
-		suite.addTest(OpenCSSEditorTest.suite());
-		// $JUnit-END$
-		return suite;
-	}
+//	public static Test suite()
+//	{
+//		TestSuite suite = new TestSuite("Performance Tests for com.aptana.editor.css plugin")
+//		{
+//			@Override
+//			public void runTest(Test test, TestResult result)
+//			{
+//				String msg = MessageFormat.format("Running test: {0}", test.toString());
+//				System.err.println(msg);
+//				super.runTest(test, result);
+//			}
+//		};
+//		// $JUnit-BEGIN$
+//		suite.addTestSuite(CSSCodeScannerPerformanceTest.class);
+//		suite.addTest(OpenCSSEditorTest.suite());
+//		// $JUnit-END$
+//		return suite;
+//	}
 }

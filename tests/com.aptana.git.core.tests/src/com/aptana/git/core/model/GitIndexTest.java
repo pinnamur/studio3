@@ -1,5 +1,11 @@
 package com.aptana.git.core.model;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.FileWriter;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -10,6 +16,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.junit.Test;
 
 import com.aptana.core.IFilter;
 import com.aptana.core.IMap;
@@ -20,7 +27,7 @@ import com.aptana.git.core.model.ChangedFile.Status;
 
 public class GitIndexTest extends GitTestCase
 {
-
+	@Test
 	public void testStageFilesUpdatesStagedFlagsOnAffectedFiles() throws Exception
 	{
 		GitRepository repo = createRepo();
@@ -33,8 +40,8 @@ public class GitIndexTest extends GitTestCase
 
 		// Generate faked unmerged file in index
 		List<ChangedFile> blah = new ArrayList<ChangedFile>();
-		ChangedFile changedFile = new ChangedFile(fileName, Status.UNMERGED);
-		changedFile.hasUnstagedChanges = true;
+		ChangedFile changedFile = new ChangedFile(null, Path.fromPortableString(fileName), Status.UNMERGED, null, null,
+				false, true);
 		blah.add(changedFile);
 		GitIndex index = new GitIndex(repo);
 		index.changedFiles = blah;
@@ -71,6 +78,7 @@ public class GitIndexTest extends GitTestCase
 				fileToStage.hasUnstagedChanges());
 	}
 
+	@Test
 	public void testUnstageFilesUpdatesStagedFlagsOnAffectedFiles() throws Exception
 	{
 		GitRepository repo = createRepo();
@@ -97,7 +105,10 @@ public class GitIndexTest extends GitTestCase
 
 		// Now fake the new status as being unmerged
 		List<ChangedFile> blah = index.changedFiles();
-		blah.iterator().next().status = Status.UNMERGED;
+		ChangedFile orig = blah.remove(0);
+		ChangedFile unmerged = new ChangedFile(orig.getRepository(), orig.getRelativePath(), Status.UNMERGED,
+				orig.getCommitBlobMode(), orig.getCommitBlobSHA(), orig.hasStagedChanges(), orig.hasUnstagedChanges());
+		blah.add(0, unmerged);
 		index.changedFiles = blah;
 
 		assertFalse(index.hasUnresolvedMergeConflicts());
@@ -131,6 +142,7 @@ public class GitIndexTest extends GitTestCase
 				fileToStage.hasUnstagedChanges());
 	}
 
+	@Test
 	public void testBatchRefreshRepoWithNoCommitsAndNewUnstagedFile() throws Exception
 	{
 		GitRepository repo = createRepo();
@@ -146,6 +158,7 @@ public class GitIndexTest extends GitTestCase
 	}
 
 	// FIXME There seems to be no way to tell if an untracked file is staged or unstaged...?
+	// @Test
 	// public void testBatchRefreshRepoWithNoCommitsAndNewStagedFile() throws Exception
 	// {
 	// testBatchRefreshRepoWithNoCommitsAndNewUnstagedFile();
@@ -162,6 +175,7 @@ public class GitIndexTest extends GitTestCase
 	// assertContains(files, "somefile.txt", Status.NEW, true, false);
 	// }
 
+	@Test
 	public void testBatchRefreshRepoWithEveryStatus() throws Exception
 	{
 		GitRepository repo = createRepo();
@@ -189,8 +203,8 @@ public class GitIndexTest extends GitTestCase
 		// Commit a couple files, then test staged delete, unstaged delete, untracked, staged mod, unstaged mod.
 
 		// Delete 1 and 2
-		repo.deleteFile("file1.txt");
-		repo.deleteFile("file2.txt");
+		repo.deleteFile(Path.fromPortableString("file1.txt"));
+		repo.deleteFile(Path.fromPortableString("file2.txt"));
 
 		// Modify 3 and 4
 		writer = new FileWriter(repo.workingDirectory().append("file3.txt").toOSString(), true);
@@ -218,7 +232,8 @@ public class GitIndexTest extends GitTestCase
 		{
 			public boolean include(ChangedFile item)
 			{
-				return CollectionsUtil.newSet("file1.txt", "file3.txt", "file5.txt").contains(item.portablePath);
+				return CollectionsUtil.newSet("file1.txt", "file3.txt", "file5.txt").contains(
+						item.getRelativePath().toPortableString());
 			}
 		});
 		assertStageFiles(repo.index(), toStage);
@@ -228,7 +243,7 @@ public class GitIndexTest extends GitTestCase
 		{
 			public boolean include(ChangedFile item)
 			{
-				return CollectionsUtil.newSet("file2.txt").contains(item.portablePath);
+				return CollectionsUtil.newSet("file2.txt").contains(item.getRelativePath().toPortableString());
 			}
 		});
 		assertUnstageFiles(repo.index(), toUnstage);
@@ -245,6 +260,7 @@ public class GitIndexTest extends GitTestCase
 		assertContains(files, "file6.txt", Status.NEW, false, true);
 	}
 
+	@Test
 	public void testDiffRefreshRepoWithEveryStatus() throws Exception
 	{
 		GitRepository repo = createRepo();
@@ -272,8 +288,8 @@ public class GitIndexTest extends GitTestCase
 		// Commit a couple files, then test staged delete, unstaged delete, untracked, staged mod, unstaged mod.
 
 		// Delete 1 and 2
-		repo.deleteFile("file1.txt");
-		repo.deleteFile("file2.txt");
+		repo.deleteFile(Path.fromPortableString("file1.txt"));
+		repo.deleteFile(Path.fromPortableString("file2.txt"));
 
 		// Modify 3 and 4
 		writer = new FileWriter(repo.workingDirectory().append("file3.txt").toOSString(), true);
@@ -301,7 +317,8 @@ public class GitIndexTest extends GitTestCase
 		{
 			public boolean include(ChangedFile item)
 			{
-				return CollectionsUtil.newSet("file1.txt", "file3.txt", "file5.txt").contains(item.portablePath);
+				return CollectionsUtil.newSet("file1.txt", "file3.txt", "file5.txt").contains(
+						item.getRelativePath().toPortableString());
 			}
 		});
 		assertStageFiles(repo.index(), toStage);
@@ -311,7 +328,7 @@ public class GitIndexTest extends GitTestCase
 		{
 			public boolean include(ChangedFile item)
 			{
-				return CollectionsUtil.newSet("file2.txt").contains(item.portablePath);
+				return CollectionsUtil.newSet("file2.txt").contains(item.getRelativePath().toPortableString());
 			}
 		});
 		assertUnstageFiles(repo.index(), toUnstage);
@@ -340,8 +357,9 @@ public class GitIndexTest extends GitTestCase
 
 			public boolean include(ChangedFile item)
 			{
-				return ObjectUtil.areEqual(item.portablePath, path) && item.hasStagedChanges == hasStaged
-						&& item.hasUnstagedChanges == hasUnstaged && item.status == status;
+				return ObjectUtil.areEqual(item.getRelativePath().toPortableString(), path)
+						&& item.hasStagedChanges() == hasStaged && item.hasUnstagedChanges() == hasUnstaged
+						&& item.status == status;
 			}
 		});
 		List<String> fileStrings = CollectionsUtil.map(files, new IMap<ChangedFile, String>()
@@ -358,6 +376,7 @@ public class GitIndexTest extends GitTestCase
 				status, hasStaged, hasUnstaged, StringUtil.join(", ", fileStrings)), CollectionsUtil.isEmpty(matching));
 	}
 
+	@Test
 	public void testDeadlock() throws Exception
 	{
 		final GitRepository repo = getRepo();

@@ -7,10 +7,13 @@
  */
 package com.aptana.css.core.internal.build;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.List;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
+import org.junit.Test;
 
 import com.aptana.buildpath.core.tests.AbstractValidatorTestCase;
 import com.aptana.core.build.IBuildParticipant;
@@ -47,11 +50,18 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		return "css";
 	}
 
+	@Override
+	protected String getContentType()
+	{
+		return ICSSConstants.CONTENT_TYPE_CSS;
+	}
+
 	protected List<IProblem> getParseErrors(String source) throws CoreException
 	{
 		return getParseErrors(source, new ParseState(source), ICSSConstants.W3C_PROBLEM);
 	}
 
+	@Test
 	public void testCSS3TransitionProperty() throws CoreException
 	{
 		String text = "div {\ntransition: width 2s;\n}";
@@ -60,6 +70,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSSPropertyPrecededByDash() throws CoreException
 	{
 		String text = "div {\n-background-color: #123;\n}";
@@ -68,6 +79,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testPropertyValueNone() throws CoreException
 	{
 		String text = "H1:before {\ncontent: none;\n}";
@@ -76,6 +88,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3ResizeProperty() throws CoreException
 	{
 		String text = "div {\nresize: both;\n}";
@@ -84,6 +97,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3BackgroundProperty() throws CoreException
 	{
 		String text = "div {\nbackground-clip: border-box;\nbackground-origin: content-box;\n}";
@@ -92,6 +106,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3SrcPropertyInFontFace() throws CoreException
 	{
 		String text = "@font-face {\nsrc: url(\"\");\n}";
@@ -104,6 +119,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(IMarker.SEVERITY_WARNING, item.getSeverity().intValue());
 	}
 
+	@Test
 	public void testCSS3AtRule() throws CoreException
 	{
 		String text = "@namespace \"\";";
@@ -112,6 +128,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3MediaQuery() throws CoreException
 	{
 		String text = "@media only screen and (max-width: 600px) {\n}";
@@ -120,6 +137,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3RgbaColor() throws CoreException
 	{
 		String text = "div {\nbackground-color: rgba(255, 255, 255, 0.5);\ncolor: rgba(255, 255, 255, 0.5);\n}";
@@ -128,6 +146,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3BoxSizingProperty() throws CoreException
 	{
 		String text = "div {\nbox-sizing: border-box;\n}";
@@ -136,6 +155,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3OutlineOffsetProperty() throws CoreException
 	{
 		String text = "div {\noutline-offset: 10px;\n}";
@@ -144,6 +164,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3TransformProperty() throws CoreException
 	{
 		String text = "div {\ntransform: scale(0.5) rotate(90deg) translate(10px, 10px) skew(45deg, 60deg);\n}";
@@ -152,6 +173,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3UserSelectProperty() throws CoreException
 	{
 		String text = "div {\nuser-select: none;\n}";
@@ -160,6 +182,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3LinearGradient() throws CoreException
 	{
 		String text = "div {\nbackground-image: -ms-linear-gradient(left, #2c072c, #3d243d, #2c072c);\nbackground-image: -o-linear-gradient(left, #2c072c, #3d243d, #2c072c);\nbackground-image: linear-gradient(left, #2c072c, #3d243d, #2c072c);\n}";
@@ -168,6 +191,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3NotSyntax() throws CoreException
 	{
 		//@formatter:off
@@ -187,6 +211,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3NotSyntax1() throws CoreException
 	{
 		String text = "div:not(.home){}";
@@ -195,6 +220,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3NotSyntax2() throws CoreException
 	{
 		String text = "div *:not(p) em{}";
@@ -203,6 +229,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3NotSyntax3() throws CoreException
 	{
 		String text = "input:not([type=\"file\"]){}";
@@ -211,6 +238,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3NotSyntax4() throws CoreException
 	{
 		String text = "h2:not(.foo, .bar){}";
@@ -219,6 +247,7 @@ public class CSSValidatorTest extends AbstractValidatorTestCase
 		assertEquals(0, items.size());
 	}
 
+	@Test
 	public void testCSS3NotSyntax5() throws CoreException
 	{
 		String text = "li:not(.pingback) .comment-content p:first-child:first-line{}";

@@ -7,19 +7,12 @@
  */
 package com.aptana.editor.js.sdoc.parsing;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import org.junit.runners.Suite.SuiteClasses;
 
+@RunWith(Suite.class)
+@SuiteClasses({ SDocAutoCompletionTest.class })
 public class SDocParsingTests
 {
-
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite("Tests for com.aptana.editor.js.sdoc.parsing");
-		// $JUnit-BEGIN$
-		suite.addTestSuite(SDocAutoCompletionTest.class);
-		// $JUnit-END$
-		return suite;
-	}
-
 }

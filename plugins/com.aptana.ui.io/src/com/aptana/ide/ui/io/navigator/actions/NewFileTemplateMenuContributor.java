@@ -71,6 +71,7 @@ public class NewFileTemplateMenuContributor extends ContributionItem
 
 	// @formatter:off
 	private static final Set<String> FILTERED_EDITORS = CollectionsUtil.newSet(
+			"com.aptana.editor.xml.alloy", //$NON-NLS-1$
 			"com.aptana.editor.dtd", //$NON-NLS-1$
 			"com.aptana.editor.svg" //$NON-NLS-1$
 			);
@@ -93,7 +94,6 @@ public class NewFileTemplateMenuContributor extends ContributionItem
 		return true;
 	}
 
-	@SuppressWarnings("unused")
 	@Override
 	public void fill(Menu menu, int index)
 	{
@@ -114,18 +114,18 @@ public class NewFileTemplateMenuContributor extends ContributionItem
 
 		// constructs the menus
 		final Map<String, List<TemplateElement>> templatesByBundle = getNewFileTemplates();
-		for (String filetype : editors)
+		for (final String filetype : editors)
 		{
-			MenuItem editorItem = new MenuItem(menu, SWT.CASCADE);
-			editorItem.setText(filetype);
-
-			Menu editorMenu = new Menu(menu);
-			editorItem.setMenu(editorMenu);
-
 			List<TemplateElement> templates = templatesByBundle.get(filetype);
 			boolean hasTemplates = !CollectionsUtil.isEmpty(templates);
+			MenuItem editorItem = new MenuItem(menu, hasTemplates ? SWT.CASCADE : SWT.PUSH);
+			editorItem.setText(filetype);
+
 			if (hasTemplates)
 			{
+				Menu editorMenu = new Menu(menu);
+				editorItem.setMenu(editorMenu);
+
 				// sorts by precedence first
 				Collections.sort(templates, new Comparator<TemplateElement>()
 				{
@@ -166,27 +166,30 @@ public class NewFileTemplateMenuContributor extends ContributionItem
 				}
 				// adds a separator if there are built-in templates
 				new MenuItem(editorMenu, SWT.SEPARATOR);
-			}
 
-			// TODO If we have no templates for an editor, do we really want a blank file entry?
-			// adds a "Blank File" item
-			String fileExtension;
-			if (hasTemplates)
-			{
-				fileExtension = templates.get(0).getFiletype();
+				// Blank file for filetype
+				String fileExtension = templates.get(0).getFiletype();
 				// strips the leading *. if there is one
 				int dotIndex = fileExtension.lastIndexOf('.');
 				if (dotIndex > -1)
 				{
 					fileExtension = fileExtension.substring(dotIndex + 1);
 				}
+				createBlankFileMenu(editorMenu, filetype, fileExtension);
 			}
 			else
 			{
-				fileExtension = aptanaEditors.get(filetype);
-			}
+				// Make the top level filetype entry create the blank file!
+				editorItem.addSelectionListener(new SelectionAdapter()
+				{
 
-			createBlankFileMenu(editorMenu, filetype, fileExtension);
+					@Override
+					public void widgetSelected(SelectionEvent e)
+					{
+						createNewBlankFile(filetype, aptanaEditors.get(filetype));
+					}
+				});
+			}
 		}
 	}
 

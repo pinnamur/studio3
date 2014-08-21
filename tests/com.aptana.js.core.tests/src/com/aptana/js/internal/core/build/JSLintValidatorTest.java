@@ -7,6 +7,8 @@
  */
 package com.aptana.js.internal.core.build;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.Set;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
+import org.junit.Test;
 
 import com.aptana.buildpath.core.tests.AbstractValidatorTestCase;
 import com.aptana.core.build.IBuildParticipant;
@@ -63,6 +66,12 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 	}
 
 	@Override
+	protected String getContentType()
+	{
+		return IJSConstants.CONTENT_TYPE_JS;
+	}
+
+	@Override
 	protected String getFileExtension()
 	{
 		return "js";
@@ -73,6 +82,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		return getParseErrors(source, new JSParseState(source), IJSConstants.JSLINT_PROBLEM_MARKER_TYPE);
 	}
 
+	@Test
 	public void testALabel1() throws CoreException
 	{
 		// @formatter:off
@@ -89,6 +99,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'bar' is a statement label.", 5, IMarker.SEVERITY_WARNING, 75);
 	}
 
+	@Test
 	public void testAlreadyDefined() throws CoreException
 	{
 		// @formatter:off
@@ -102,6 +113,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'foo' is already defined.", 3, IMarker.SEVERITY_WARNING, 42);
 	}
 
+	@Test
 	public void testAlreadyDefinedOK1() throws CoreException
 	{
 		// @formatter:off
@@ -116,6 +128,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "'' is already defined.");
 	}
 
+	@Test
 	public void testAnd() throws CoreException
 	{
 		// @formatter:off
@@ -131,6 +144,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				78);
 	}
 
+	@Test
 	public void testAScopeOK1() throws CoreException
 	{
 		// @formatter:off
@@ -152,6 +166,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "'window' used out of scope.");
 	}
 
+	@Test
 	public void testAssignException() throws CoreException
 	{
 		// @formatter:off
@@ -168,6 +183,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Do not assign to the exception parameter.", 5, IMarker.SEVERITY_WARNING, 78);
 	}
 
+	@Test
 	public void testAssignmentFunctionExpression() throws CoreException
 	{
 		// @formatter:off
@@ -179,6 +195,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 6);
 	}
 
+	@Test
 	public void testAvoidA1() throws CoreException
 	{
 		// @formatter:off
@@ -191,6 +208,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Avoid 'arguments.caller'.", 2, IMarker.SEVERITY_WARNING, 32);
 	}
 
+	@Test
 	public void testAvoidA2() throws CoreException
 	{
 		// @formatter:off
@@ -203,6 +221,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Avoid 'arguments.callee'.", 2, IMarker.SEVERITY_WARNING, 32);
 	}
 
+	@Test
 	public void testBadAssignmentA1() throws CoreException
 	{
 		// @formatter:off
@@ -213,6 +232,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad assignment.", 1, IMarker.SEVERITY_WARNING, 9);
 	}
 
+	@Test
 	public void testBadAssignmentA2() throws CoreException
 	{
 		// @formatter:off
@@ -223,6 +243,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad assignment.", 1, IMarker.SEVERITY_WARNING, 34);
 	}
 
+	@Test
 	public void testBadAssignmentA3() throws CoreException
 	{
 		// @formatter:off
@@ -233,6 +254,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad assignment.", 1, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testBadAssignmentA4() throws CoreException
 	{
 		// @formatter:off
@@ -243,6 +265,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad assignment.", 1, IMarker.SEVERITY_WARNING, 31);
 	}
 
+	@Test
 	public void testBadAssignmentA5() throws CoreException
 	{
 		// @formatter:off
@@ -253,6 +276,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad assignment.", 1, IMarker.SEVERITY_WARNING, 6);
 	}
 
+	@Test
 	public void testBadAssignmentAOK1() throws CoreException
 	{
 		// @formatter:off
@@ -263,6 +287,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Bad assignment.");
 	}
 
+	@Test
 	public void testBadConstructor() throws CoreException
 	{
 		// @formatter:off
@@ -280,6 +305,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad constructor.", 8, IMarker.SEVERITY_WARNING, 177);
 	}
 
+	@Test
 	public void testBadInA() throws CoreException
 	{
 		// @formatter:off
@@ -292,6 +318,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad for in variable 'i'.", 2, IMarker.SEVERITY_WARNING, 24);
 	}
 
+	@Test
 	public void testBadInvocation1() throws CoreException
 	{
 		// @formatter:off
@@ -302,6 +329,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad invocation.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testBadInvocation2() throws CoreException
 	{
 		// @formatter:off
@@ -312,6 +340,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad invocation.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testBadNameA1() throws CoreException
 	{
 		// @formatter:off
@@ -322,6 +351,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad name: '123'.", 1, IMarker.SEVERITY_WARNING, 12);
 	}
 
+	@Test
 	public void testBadNameA2() throws CoreException
 	{
 		// @formatter:off
@@ -332,6 +362,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad name: '1'.", 1, IMarker.SEVERITY_WARNING, 14);
 	}
 
+	@Test
 	public void testBadNew() throws CoreException
 	{
 		// @formatter:off
@@ -343,6 +374,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Do not use 'new' for side effects.", 2, IMarker.SEVERITY_WARNING, 29);
 	}
 
+	@Test
 	public void testBadNewOK1() throws CoreException
 	{
 		// @formatter:off
@@ -354,6 +386,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Do not use 'new' for side effects.");
 	}
 
+	@Test
 	public void testBadNewOK2() throws CoreException
 	{
 		// @formatter:off
@@ -366,6 +399,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Do not use 'new' for side effects.");
 	}
 
+	@Test
 	public void testBadNewOK3() throws CoreException
 	{
 		// @formatter:off
@@ -376,6 +410,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Do not use 'new' for side effects.");
 	}
 
+	@Test
 	public void testBadNewOK4() throws CoreException
 	{
 		// @formatter:off
@@ -386,6 +421,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Do not use 'new' for side effects.");
 	}
 
+	@Test
 	public void testBadNumber1() throws CoreException
 	{
 		// @formatter:off
@@ -396,6 +432,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad number '1.7976931348623157e+309'.", 1, IMarker.SEVERITY_WARNING, 36);
 	}
 
+	@Test
 	public void testBadNumber2() throws CoreException
 	{
 		// @formatter:off
@@ -406,6 +443,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad number '1.7976931348623157e+309'.", 1, IMarker.SEVERITY_WARNING, 37);
 	}
 
+	@Test
 	public void testBadOperand1() throws CoreException
 	{
 		// @formatter:off
@@ -421,6 +459,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad operand.", 4, IMarker.SEVERITY_WARNING, 86);
 	}
 
+	@Test
 	public void testBadOperand2() throws CoreException
 	{
 		// @formatter:off
@@ -435,6 +474,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Bad operand.", 3, IMarker.SEVERITY_WARNING, 48);
 	}
 
+	@Test
 	public void testBadWrap() throws CoreException
 	{
 		// @formatter:off
@@ -458,6 +498,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 46);
 	}
 
+	@Test
 	public void testCombineVar() throws CoreException
 	{
 		// @formatter:off
@@ -471,6 +512,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Combine this with the previous 'var' statement.", 3, IMarker.SEVERITY_WARNING, 42);
 	}
 
+	@Test
 	public void testCombineVarOK1() throws CoreException
 	{
 		// @formatter:off
@@ -483,6 +525,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Combine this with the previous 'var' statement.");
 	}
 
+	@Test
 	public void testConditionalAssignmentAndLeftSide() throws CoreException
 	{
 		// @formatter:off
@@ -497,6 +540,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testConditionalAssignmentAndRightSide() throws CoreException
 	{
 		// @formatter:off
@@ -511,6 +555,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 23);
 	}
 
+	@Test
 	public void testConditionalAssignmentDoWhile() throws CoreException
 	{
 		// @formatter:off
@@ -525,6 +570,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 38);
 	}
 
+	@Test
 	public void testConditionalAssignmentFor() throws CoreException
 	{
 		// @formatter:off
@@ -539,6 +585,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 21);
 	}
 
+	@Test
 	public void testConditionalAssignmentIf() throws CoreException
 	{
 		// @formatter:off
@@ -553,6 +600,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 17);
 	}
 
+	@Test
 	public void testConditionalAssignmentOrLeftSide() throws CoreException
 	{
 		// @formatter:off
@@ -567,6 +615,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testConditionalAssignmentOrRightSide() throws CoreException
 	{
 		// @formatter:off
@@ -581,6 +630,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 23);
 	}
 
+	@Test
 	public void testConditionalAssignmentSwitch() throws CoreException
 	{
 		// @formatter:off
@@ -599,6 +649,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 17);
 	}
 
+	@Test
 	public void testConditionalAssignmentTernary() throws CoreException
 	{
 		// @formatter:off
@@ -611,6 +662,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 22);
 	}
 
+	@Test
 	public void testConditionalAssignmentWhile() throws CoreException
 	{
 		// @formatter:off
@@ -625,6 +677,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 20);
 	}
 
+	@Test
 	public void testConfusingABang1() throws CoreException
 	{
 		// @formatter:off
@@ -637,6 +690,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Confusing use of '!'.", 2, IMarker.SEVERITY_WARNING, 11);
 	}
 
+	@Test
 	public void testConfusingABang2() throws CoreException
 	{
 		// @formatter:off
@@ -649,6 +703,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Confusing use of '!'.", 2, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testConfusingAInfixMinusMinusMinus() throws CoreException
 	{
 		// @formatter:off
@@ -660,6 +715,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Confusing use of '---'.", 2, IMarker.SEVERITY_WARNING, 17);
 	}
 
+	@Test
 	public void testConfusingAInfixPlusPlusPlus() throws CoreException
 	{
 		// @formatter:off
@@ -671,6 +727,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Confusing use of '+++'.", 2, IMarker.SEVERITY_WARNING, 17);
 	}
 
+	@Test
 	public void testConfusingAPrefixMinusMinusMinus() throws CoreException
 	{
 		// @formatter:off
@@ -682,6 +739,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Confusing use of '---'.", 2, IMarker.SEVERITY_WARNING, 15);
 	}
 
+	@Test
 	public void testConfusingAPrefixPlusPlusPlus() throws CoreException
 	{
 		// @formatter:off
@@ -693,6 +751,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Confusing use of '+++'.", 2, IMarker.SEVERITY_WARNING, 15);
 	}
 
+	@Test
 	public void testConfusingRegexp1() throws CoreException
 	{
 		// @formatter:off
@@ -703,6 +762,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Confusing regular expression.", 1, IMarker.SEVERITY_ERROR, 8);
 	}
 
+	@Test
 	public void testConfusingRegexp2() throws CoreException
 	{
 		// @formatter:off
@@ -724,6 +784,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 	// assertProblemExists(items, "Unsafe character.", 1, IMarker.SEVERITY_WARNING, 14);
 	// }
 
+	@Test
 	public void testConstructorNameA1() throws CoreException
 	{
 		// @formatter:off
@@ -736,6 +797,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 32);
 	}
 
+	@Test
 	public void testDangerousComment1() throws CoreException
 	{
 		setOption("safe", true);
@@ -747,6 +809,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Dangerous comment.", 1, IMarker.SEVERITY_WARNING, 2);
 	}
 
+	@Test
 	public void testDangerousComment2() throws CoreException
 	{
 		setOption("safe", true);
@@ -770,6 +833,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		fValidator = wc.doSave();
 	}
 
+	@Test
 	public void testDangerousComment3() throws CoreException
 	{
 		setOption("safe", true);
@@ -781,6 +845,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Dangerous comment.", 1, IMarker.SEVERITY_WARNING, 2);
 	}
 
+	@Test
 	public void testDangerousComment4() throws CoreException
 	{
 		setOption("safe", true);
@@ -792,6 +857,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Dangerous comment.", 1, IMarker.SEVERITY_WARNING, 2);
 	}
 
+	@Test
 	public void testDangerousComment5() throws CoreException
 	{
 		setOption("safe", true);
@@ -803,6 +869,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Dangerous comment.", 1, IMarker.SEVERITY_WARNING, 2);
 	}
 
+	@Test
 	public void testDangerousComment6() throws CoreException
 	{
 		setOption("safe", true);
@@ -814,6 +881,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Dangerous comment.", 1, IMarker.SEVERITY_WARNING, 2);
 	}
 
+	@Test
 	public void testDangerousComment7() throws CoreException
 	{
 		setOption("safe", true);
@@ -825,6 +893,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Dangerous comment.", 1, IMarker.SEVERITY_WARNING, 2);
 	}
 
+	@Test
 	public void testDangerousCommentOKIfSafeOptionNotExplicitlyTurnedOn() throws CoreException
 	{
 		// @formatter:off
@@ -835,6 +904,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Dangerous comment.");
 	}
 
+	@Test
 	public void testDanglingA1() throws CoreException
 	{
 		// @formatter:off
@@ -845,6 +915,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected dangling '_' in '_foo'.", 1, IMarker.SEVERITY_WARNING, 4);
 	}
 
+	@Test
 	public void testDanglingA2() throws CoreException
 	{
 		// @formatter:off
@@ -855,6 +926,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected dangling '_' in 'foo_'.", 1, IMarker.SEVERITY_WARNING, 4);
 	}
 
+	@Test
 	public void testDelete1() throws CoreException
 	{
 		// @formatter:off
@@ -866,6 +938,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Only properties should be deleted.", 2, IMarker.SEVERITY_WARNING, 19);
 	}
 
+	@Test
 	public void testDelete2() throws CoreException
 	{
 		// @formatter:off
@@ -877,6 +950,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Only properties should be deleted.", 2, IMarker.SEVERITY_WARNING, 24);
 	}
 
+	@Test
 	public void testDeleteOK() throws CoreException
 	{
 		// @formatter:off
@@ -888,6 +962,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Only properties should be deleted.");
 	}
 
+	@Test
 	public void testDuplicateACase1() throws CoreException
 	{
 		// @formatter:off
@@ -908,6 +983,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Duplicate 'a'.", 5, IMarker.SEVERITY_WARNING, 48);
 	}
 
+	@Test
 	public void testDuplicateACase2() throws CoreException
 	{
 		// @formatter:off
@@ -927,6 +1003,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Duplicate '1'.", 3, IMarker.SEVERITY_WARNING, 29);
 	}
 
+	@Test
 	public void testDuplicateAGetterSetter() throws CoreException
 	{
 		// @formatter:off
@@ -953,6 +1030,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Duplicate 'a'.", 16, IMarker.SEVERITY_WARNING, 344);
 	}
 
+	@Test
 	public void testDuplicateAJSONPropertyName() throws CoreException
 	{
 		// @formatter:off
@@ -963,6 +1041,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Duplicate 'property'.", 1, IMarker.SEVERITY_WARNING, 16);
 	}
 
+	@Test
 	public void testEmptyBlock1() throws CoreException
 	{
 		// @formatter:off
@@ -974,6 +1053,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Empty block.", 2, IMarker.SEVERITY_WARNING, 12);
 	}
 
+	@Test
 	public void testEmptyBlock2() throws CoreException
 	{
 		// @formatter:off
@@ -987,6 +1067,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Empty block.", 4, IMarker.SEVERITY_WARNING, 36);
 	}
 
+	@Test
 	public void testEmptyBlock3() throws CoreException
 	{
 		// @formatter:off
@@ -998,6 +1079,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Empty block.", 2, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testEmptyBlock4() throws CoreException
 	{
 		// @formatter:off
@@ -1009,6 +1091,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Empty block.", 2, IMarker.SEVERITY_WARNING, 15);
 	}
 
+	@Test
 	public void testEmptyBlock5() throws CoreException
 	{
 		// @formatter:off
@@ -1020,6 +1103,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Empty block.", 2, IMarker.SEVERITY_WARNING, 7);
 	}
 
+	@Test
 	public void testEmptyCase() throws CoreException
 	{
 		// @formatter:off
@@ -1036,6 +1120,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Empty case.", 5, IMarker.SEVERITY_WARNING, 59);
 	}
 
+	@Test
 	public void testEmptyClass() throws CoreException
 	{
 		// @formatter:off
@@ -1046,6 +1131,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Empty class.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testES5() throws CoreException
 	{
 		// @formatter:off
@@ -1067,6 +1153,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "This is an ES5 feature.", 4, IMarker.SEVERITY_WARNING, 69);
 	}
 
+	@Test
 	public void testES5_2() throws CoreException
 	{
 		// @formatter:off
@@ -1078,6 +1165,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "This is an ES5 feature.", 1, IMarker.SEVERITY_WARNING, 15);
 	}
 
+	@Test
 	public void testEvil1() throws CoreException
 	{
 		// @formatter:off
@@ -1088,6 +1176,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "eval is evil.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testEvil2() throws CoreException
 	{
 		// @formatter:off
@@ -1099,6 +1188,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "eval is evil.", 2, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testEvil3() throws CoreException
 	{
 		// @formatter:off
@@ -1110,6 +1200,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "eval is evil.", 2, IMarker.SEVERITY_WARNING, 29);
 	}
 
+	@Test
 	public void testExpectedAAtBC() throws CoreException
 	{
 		setOption("white", false);
@@ -1123,6 +1214,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Expected 'var' at column 5, not column 1.", 2, IMarker.SEVERITY_WARNING, 15);
 	}
 
+	@Test
 	public void testExpectedIdentifer() throws CoreException
 	{
 		// @formatter:off
@@ -1133,6 +1225,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Expected an identifier and instead saw '='.", 1, IMarker.SEVERITY_ERROR, 4);
 	}
 
+	@Test
 	public void testExpectedIdentiferAReserved1() throws CoreException
 	{
 		// @formatter:off
@@ -1144,6 +1237,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 4);
 	}
 
+	@Test
 	public void testExpectedIdentiferAReserved2() throws CoreException
 	{
 		// @formatter:off
@@ -1155,6 +1249,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 9);
 	}
 
+	@Test
 	public void testExpectedNumberA1() throws CoreException
 	{
 		// @formatter:off
@@ -1165,6 +1260,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Expected a number and instead saw 'a'.", 1, IMarker.SEVERITY_WARNING, 10);
 	}
 
+	@Test
 	public void testExpectedNumberAOK1() throws CoreException
 	{
 		// @formatter:off
@@ -1175,6 +1271,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Expected a number and instead saw '(.*?)\\'.");
 	}
 
+	@Test
 	public void testFixedWrapImmediate() throws CoreException
 	{
 		// @formatter:off
@@ -1188,6 +1285,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				"Wrap an immediate function invocation in parentheses to assist the reader in understanding that the expression is the result of a function, and not the function itself.");
 	}
 
+	@Test
 	public void testForIf1() throws CoreException
 	{
 		// @formatter:off
@@ -1207,6 +1305,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIf2() throws CoreException
 	{
 		// @formatter:off
@@ -1226,6 +1325,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIf3() throws CoreException
 	{
 		// Skips && conditions to next segment
@@ -1246,6 +1346,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIf4() throws CoreException
 	{
 		// @formatter:off
@@ -1265,6 +1366,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIf5() throws CoreException
 	{
 		// @formatter:off
@@ -1284,6 +1386,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIf6() throws CoreException
 	{
 		// @formatter:off
@@ -1303,6 +1406,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIf7() throws CoreException
 	{
 		// @formatter:off
@@ -1322,6 +1426,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIf8() throws CoreException
 	{
 		// @formatter:off
@@ -1341,6 +1446,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testForIfOk1() throws CoreException
 	{
 		// @formatter:off
@@ -1358,6 +1464,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				"The body of a for in should be wrapped in an if statement to filter unwanted properties from the prototype.");
 	}
 
+	@Test
 	public void testForIfOk2() throws CoreException
 	{
 		// @formatter:off
@@ -1375,6 +1482,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				"The body of a for in should be wrapped in an if statement to filter unwanted properties from the prototype.");
 	}
 
+	@Test
 	public void testForIfOk3() throws CoreException
 	{
 		// @formatter:off
@@ -1392,6 +1500,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				"The body of a for in should be wrapped in an if statement to filter unwanted properties from the prototype.");
 	}
 
+	@Test
 	public void testForIfOk4() throws CoreException
 	{
 		// @formatter:off
@@ -1409,6 +1518,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				"The body of a for in should be wrapped in an if statement to filter unwanted properties from the prototype.");
 	}
 
+	@Test
 	public void testForIfOk5() throws CoreException
 	{
 		// @formatter:off
@@ -1426,6 +1536,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				"The body of a for in should be wrapped in an if statement to filter unwanted properties from the prototype.");
 	}
 
+	@Test
 	public void testFunctionBlock1() throws CoreException
 	{
 		// @formatter:off
@@ -1443,6 +1554,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				3, IMarker.SEVERITY_WARNING, 41);
 	}
 
+	@Test
 	public void testFunctionEval() throws CoreException
 	{
 		// @formatter:off
@@ -1453,6 +1565,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "The Function constructor is eval.", 1, IMarker.SEVERITY_WARNING, 25);
 	}
 
+	@Test
 	public void testFunctionLoop1() throws CoreException
 	{
 		// @formatter:off
@@ -1467,6 +1580,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Don't make functions within a loop.", 5, IMarker.SEVERITY_WARNING, 72);
 	}
 
+	@Test
 	public void testFunctionLoop2() throws CoreException
 	{
 		// @formatter:off
@@ -1490,6 +1604,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Don't make functions within a loop.", 7, IMarker.SEVERITY_WARNING, 115);
 	}
 
+	@Test
 	public void testFunctionStatement() throws CoreException
 	{
 		// @formatter:off
@@ -1502,6 +1617,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_ERROR, 17);
 	}
 
+	@Test
 	public void testFunctionStrict1() throws CoreException
 	{
 		// @formatter:off
@@ -1513,6 +1629,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the function form of 'use strict'.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testFunctionStrict2() throws CoreException
 	{
 		// @formatter:off
@@ -1526,6 +1643,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the function form of 'use strict'.", 3, IMarker.SEVERITY_WARNING, 36);
 	}
 
+	@Test
 	public void testHTMLConfusionA1() throws CoreException
 	{
 		// @formatter:off
@@ -1542,6 +1660,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "HTML confusion in regular expression '<!'.", 4, IMarker.SEVERITY_WARNING, 32);
 	}
 
+	@Test
 	public void testHTMLConfusionA2() throws CoreException
 	{
 		// @formatter:off
@@ -1558,6 +1677,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "HTML confusion in regular expression '</'.", 4, IMarker.SEVERITY_WARNING, 33);
 	}
 
+	@Test
 	public void testHTMLConfusionA3() throws CoreException
 	{
 		// @formatter:off
@@ -1574,6 +1694,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "HTML confusion in regular expression '<!'.", 4, IMarker.SEVERITY_WARNING, 33);
 	}
 
+	@Test
 	public void testImpliedEvil1() throws CoreException
 	{
 		// @formatter:off
@@ -1585,6 +1706,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testImpliedEvil2() throws CoreException
 	{
 		// @formatter:off
@@ -1596,6 +1718,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testInfixIn() throws CoreException
 	{
 		// @formatter:off
@@ -1610,6 +1733,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testInsecureA1() throws CoreException
 	{
 		// @formatter:off
@@ -1620,6 +1744,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Insecure '.'.", 1, IMarker.SEVERITY_WARNING, 9);
 	}
 
+	@Test
 	public void testInsecureA2() throws CoreException
 	{
 		// @formatter:off
@@ -1630,6 +1755,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Insecure '^'.", 1, IMarker.SEVERITY_WARNING, 10);
 	}
 
+	@Test
 	public void testIsNaN1() throws CoreException
 	{
 		// @formatter:off
@@ -1640,6 +1766,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testIsNaN2() throws CoreException
 	{
 		// @formatter:off
@@ -1650,6 +1777,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testIsNaN3() throws CoreException
 	{
 		// @formatter:off
@@ -1660,6 +1788,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testIsNaN4() throws CoreException
 	{
 		// @formatter:off
@@ -1670,6 +1799,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testIsNaN5() throws CoreException
 	{
 		// @formatter:off
@@ -1680,6 +1810,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testIsNaN6() throws CoreException
 	{
 		// @formatter:off
@@ -1690,6 +1821,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testIsNaN7() throws CoreException
 	{
 		// @formatter:off
@@ -1700,6 +1832,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testIsNaN8() throws CoreException
 	{
 		// @formatter:off
@@ -1710,6 +1843,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the isNaN function to compare with NaN.", 1, IMarker.SEVERITY_WARNING, 17);
 	}
 
+	@Test
 	public void testJSLintValidator() throws CoreException
 	{
 		// @formatter:off
@@ -1723,6 +1857,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'hello' was used before it was defined.", 3, IMarker.SEVERITY_WARNING, 50);
 	}
 
+	@Test
 	public void testLeadingDecimalA() throws CoreException
 	{
 		// @formatter:off
@@ -1734,6 +1869,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testMissingA1() throws CoreException
 	{
 		String text = "new Array";
@@ -1742,6 +1878,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Missing '()'.", 1, IMarker.SEVERITY_WARNING, 4);
 	}
 
+	@Test
 	public void testMissingA1OK() throws CoreException
 	{
 		String text = "new Array();";
@@ -1750,6 +1887,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Missing '()'.");
 	}
 
+	@Test
 	public void testMissingA2() throws CoreException
 	{
 		String text = "switch (1) {\n}";
@@ -1758,6 +1896,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Missing 'case'.", 2, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testMissingA3() throws CoreException
 	{
 		// @formatter:off
@@ -1778,6 +1917,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Missing 'throw'.", 9, IMarker.SEVERITY_WARNING, 132);
 	}
 
+	@Test
 	public void testMissingProperty() throws CoreException
 	{
 		// @formatter:off
@@ -1799,6 +1939,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Missing property name.", 4, IMarker.SEVERITY_ERROR, 73);
 	}
 
+	@Test
 	public void testMoveInvocation() throws CoreException
 	{
 		// @formatter:off
@@ -1821,6 +1962,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 249);
 	}
 
+	@Test
 	public void testMoveInvocation2() throws CoreException
 	{
 		// @formatter:off
@@ -1838,6 +1980,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 80);
 	}
 
+	@Test
 	public void testMoveVar() throws CoreException
 	{
 		// @formatter:off
@@ -1849,6 +1992,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Move 'var' declarations to the top of the function.", 1, IMarker.SEVERITY_ERROR, 5);
 	}
 
+	@Test
 	public void testNameFunction() throws CoreException
 	{
 		// @formatter:off
@@ -1859,6 +2003,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Missing name in function statement.", 1, IMarker.SEVERITY_ERROR, 9);
 	}
 
+	@Test
 	public void testNestedComment() throws CoreException
 	{
 		// @formatter:off
@@ -1871,6 +2016,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Nested comment.", 2, IMarker.SEVERITY_ERROR, 14);
 	}
 
+	@Test
 	public void testNestedNot() throws CoreException
 	{
 		// @formatter:off
@@ -1889,6 +2035,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Nested not.", 4, IMarker.SEVERITY_WARNING, 27);
 	}
 
+	@Test
 	public void testNotAConstructor1() throws CoreException
 	{
 		// @formatter:off
@@ -1899,6 +2046,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Do not use Math as a constructor.", 1, IMarker.SEVERITY_WARNING, 12);
 	}
 
+	@Test
 	public void testNotAConstructor2() throws CoreException
 	{
 		// @formatter:off
@@ -1909,6 +2057,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Do not use Number as a constructor.", 1, IMarker.SEVERITY_WARNING, 12);
 	}
 
+	@Test
 	public void testNotAConstructor3() throws CoreException
 	{
 		// @formatter:off
@@ -1919,6 +2068,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Do not use String as a constructor.", 1, IMarker.SEVERITY_WARNING, 12);
 	}
 
+	@Test
 	public void testNotAConstructor4() throws CoreException
 	{
 		// @formatter:off
@@ -1929,6 +2079,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Do not use JSON as a constructor.", 1, IMarker.SEVERITY_WARNING, 12);
 	}
 
+	@Test
 	public void testNotAConstructor5() throws CoreException
 	{
 		// @formatter:off
@@ -1952,6 +2103,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 	// assertProblemExists(items, "'foo' is already defined.", 3, IMarker.SEVERITY_WARNING, 42);
 	// }
 
+	@Test
 	public void testNotAFunction1() throws CoreException
 	{
 		// @formatter:off
@@ -1962,6 +2114,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'Math' is not a function.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testNotALabel1() throws CoreException
 	{
 		// @formatter:off
@@ -1975,6 +2128,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'something' is not a label.", 3, IMarker.SEVERITY_WARNING, 47);
 	}
 
+	@Test
 	public void testNotALabel2() throws CoreException
 	{
 		// @formatter:off
@@ -1988,6 +2142,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'foo' is not a label.", 3, IMarker.SEVERITY_WARNING, 50);
 	}
 
+	@Test
 	public void testNotALabelOK1() throws CoreException
 	{
 		// @formatter:off
@@ -2006,6 +2161,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "'something' is not a label.");
 	}
 
+	@Test
 	public void testNotALabelOK2() throws CoreException
 	{
 		// @formatter:off
@@ -2024,6 +2180,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "'something' is not a label.");
 	}
 
+	@Test
 	public void testNotGreater() throws CoreException
 	{
 		// @formatter:off
@@ -2034,6 +2191,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'3' should not be greater than '1'.", 1, IMarker.SEVERITY_WARNING, 14);
 	}
 
+	@Test
 	public void testOctalA() throws CoreException
 	{
 		for (int i = 0; i <= 6; i++)
@@ -2048,6 +2206,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		}
 	}
 
+	@Test
 	public void testParameterAGetB() throws CoreException
 	{
 		// @formatter:off
@@ -2069,6 +2228,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected parameter 'param' in get a function.", 4, IMarker.SEVERITY_WARNING, 75);
 	}
 
+	@Test
 	public void testParameterArgumentsA() throws CoreException
 	{
 		// @formatter:off
@@ -2083,6 +2243,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testParameterSetA() throws CoreException
 	{
 		// @formatter:off
@@ -2104,6 +2265,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Expected parameter (value) in set value function.", 8, IMarker.SEVERITY_ERROR, 145);
 	}
 
+	@Test
 	public void testParameterSetA2() throws CoreException
 	{
 		// @formatter:off
@@ -2125,6 +2287,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Expected parameter (value) in set value function.", 8, IMarker.SEVERITY_ERROR, 145);
 	}
 
+	@Test
 	public void testRadix() throws CoreException
 	{
 		// @formatter:off
@@ -2135,6 +2298,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Missing radix parameter.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testReadOnly() throws CoreException
 	{
 		Set<String> predefineds = CollectionsUtil.newSet("Array", "Boolean", "Date", "decodeURI", "decodeURIComponent",
@@ -2152,6 +2316,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		}
 	}
 
+	@Test
 	public void testReadOnlyEval() throws CoreException
 	{
 		Set<String> predefineds = CollectionsUtil.newSet("eval");
@@ -2166,6 +2331,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		}
 	}
 
+	@Test
 	public void testReservedA1() throws CoreException
 	{
 		// @formatter:off
@@ -2176,6 +2342,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Reserved name '__iterator__'.", 1, IMarker.SEVERITY_ERROR, 4);
 	}
 
+	@Test
 	public void testReservedA2() throws CoreException
 	{
 		// @formatter:off
@@ -2186,6 +2353,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Reserved name '__proto__'.", 1, IMarker.SEVERITY_ERROR, 4);
 	}
 
+	@Test
 	public void testSlashEqual() throws CoreException
 	{
 		// @formatter:off
@@ -2197,6 +2365,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_ERROR, 3);
 	}
 
+	@Test
 	public void testStatementBlock1() throws CoreException
 	{
 		// @formatter:off
@@ -2209,6 +2378,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				14);
 	}
 
+	@Test
 	public void testStatementBlock2() throws CoreException
 	{
 		// @formatter:off
@@ -2223,6 +2393,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertCountOfProblems(items, 1, "Expected to see a statement and instead saw a block.");
 	}
 
+	@Test
 	public void testStatementBlockOK1() throws CoreException
 	{
 		// @formatter:off
@@ -2236,6 +2407,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Expected to see a statement and instead saw a block.");
 	}
 
+	@Test
 	public void testStatementBlockOK2() throws CoreException
 	{
 		// @formatter:off
@@ -2251,6 +2423,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertCountOfProblems(items, 1, "Expected to see a statement and instead saw a block.");
 	}
 
+	@Test
 	public void testStrangeLoop1() throws CoreException
 	{
 		// @formatter:off
@@ -2265,6 +2438,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Strange loop.", 4, IMarker.SEVERITY_WARNING, 62);
 	}
 
+	@Test
 	public void testStrangeLoop2() throws CoreException
 	{
 		// @formatter:off
@@ -2279,6 +2453,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Strange loop.", 4, IMarker.SEVERITY_WARNING, 43);
 	}
 
+	@Test
 	public void testStrangeLoop3() throws CoreException
 	{
 		// @formatter:off
@@ -2293,6 +2468,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Strange loop.", 4, IMarker.SEVERITY_WARNING, 63);
 	}
 
+	@Test
 	public void testStrict1() throws CoreException
 	{
 		// @formatter:off
@@ -2306,6 +2482,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Strict violation.", 3, IMarker.SEVERITY_WARNING, 39);
 	}
 
+	@Test
 	public void testStrict2() throws CoreException
 	{
 		// @formatter:off
@@ -2317,6 +2494,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Strict violation.", 2, IMarker.SEVERITY_WARNING, 22);
 	}
 
+	@Test
 	public void testSubscript() throws CoreException
 	{
 		// @formatter:off
@@ -2328,6 +2506,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "['something'] is better written in dot notation.", 2, IMarker.SEVERITY_WARNING, 26);
 	}
 
+	@Test
 	public void testSubscriptOK() throws CoreException
 	{
 		// @formatter:off
@@ -2339,6 +2518,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "['case'] is better written in dot notation.");
 	}
 
+	@Test
 	public void testSyncA() throws CoreException
 	{
 		// @formatter:off
@@ -2350,6 +2530,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected sync method: 'methodSync'.", 2, IMarker.SEVERITY_WARNING, 26);
 	}
 
+	@Test
 	public void testTabsDontMessUpOffset() throws CoreException
 	{
 		// @formatter:off
@@ -2362,6 +2543,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "eval is evil.", 2, IMarker.SEVERITY_WARNING, 16);
 	}
 
+	@Test
 	public void testTrailingDecimalA() throws CoreException
 	{
 		// @formatter:off
@@ -2373,6 +2555,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 15);
 	}
 
+	@Test
 	public void testUnexpectedAMinusMinus() throws CoreException
 	{
 		// @formatter:off
@@ -2386,6 +2569,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected '--'.", 2, IMarker.SEVERITY_WARNING, 21);
 	}
 
+	@Test
 	public void testUnexpectedAPlusPlus() throws CoreException
 	{
 		// @formatter:off
@@ -2399,6 +2583,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected '++'.", 2, IMarker.SEVERITY_WARNING, 21);
 	}
 
+	@Test
 	public void testUnexpectedAPlusPlus2() throws CoreException
 	{
 		// @formatter:off
@@ -2412,6 +2597,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected '++'.", 2, IMarker.SEVERITY_WARNING, 21);
 	}
 
+	@Test
 	public void testUnexpectedAOK1() throws CoreException
 	{
 		// @formatter:off
@@ -2426,6 +2612,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Unexpected 'ua'.");
 	}
 
+	@Test
 	public void testUnexpectedAOK2() throws CoreException
 	{
 		// @formatter:off
@@ -2438,6 +2625,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Unexpected 'parent'.");
 	}
 
+	@Test
 	public void testUnexpectedPropertyA1() throws CoreException
 	{
 		// @formatter:off
@@ -2452,6 +2640,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected /*property*/ 'name'.", 5, IMarker.SEVERITY_WARNING, 70);
 	}
 
+	@Test
 	public void testUnexpectedPropertyA2() throws CoreException
 	{
 		// @formatter:off
@@ -2466,6 +2655,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unexpected /*property*/ 'other'.", 5, IMarker.SEVERITY_WARNING, 70);
 	}
 
+	@Test
 	public void testUnnecessaryInitialize() throws CoreException
 	{
 		// @formatter:off
@@ -2477,6 +2667,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 8);
 	}
 
+	@Test
 	public void testUnnecessaryUseStrict1() throws CoreException
 	{
 		// @formatter:off
@@ -2494,6 +2685,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unnecessary 'use strict'.", 5, IMarker.SEVERITY_WARNING, 68);
 	}
 
+	@Test
 	public void testUnreachableAB1() throws CoreException
 	{
 		// @formatter:off
@@ -2505,6 +2697,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unreachable 'var' after 'break'.", 2, IMarker.SEVERITY_WARNING, 7);
 	}
 
+	@Test
 	public void testUnreachableAB2() throws CoreException
 	{
 		// @formatter:off
@@ -2516,6 +2709,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unreachable 'var' after 'continue'.", 2, IMarker.SEVERITY_WARNING, 10);
 	}
 
+	@Test
 	public void testUnreachableAB3() throws CoreException
 	{
 		// @formatter:off
@@ -2527,6 +2721,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unreachable 'var' after 'return'.", 2, IMarker.SEVERITY_WARNING, 10);
 	}
 
+	@Test
 	public void testUnrecognizedStyleAttributeA() throws CoreException
 	{
 		// @formatter:off
@@ -2541,6 +2736,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unrecognized style attribute 'fake'.", 3, IMarker.SEVERITY_WARNING, 26);
 	}
 
+	@Test
 	public void testUnrecognizedTagA() throws CoreException
 	{
 		// @formatter:off
@@ -2551,6 +2747,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Unrecognized tag '<madeup>'.", 1, IMarker.SEVERITY_ERROR, 7);
 	}
 
+	@Test
 	public void testURL() throws CoreException
 	{
 		// @formatter:off
@@ -2561,6 +2758,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testURL2() throws CoreException
 	{
 		// @formatter:off
@@ -2571,6 +2769,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testURL3() throws CoreException
 	{
 		// @formatter:off
@@ -2581,6 +2780,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testURL4() throws CoreException
 	{
 		// @formatter:off
@@ -2591,6 +2791,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testURL5() throws CoreException
 	{
 		// @formatter:off
@@ -2601,6 +2802,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testURL6() throws CoreException
 	{
 		// @formatter:off
@@ -2611,6 +2813,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testURL7() throws CoreException
 	{
 		// @formatter:off
@@ -2621,6 +2824,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testURL8() throws CoreException
 	{
 		// @formatter:off
@@ -2636,6 +2840,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "JavaScript URL.", 2, IMarker.SEVERITY_WARNING, 17);
 	}
 
+	@Test
 	public void testUseArray() throws CoreException
 	{
 		// @formatter:off
@@ -2646,6 +2851,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the array literal notation [].", 1, IMarker.SEVERITY_WARNING, 21);
 	}
 
+	@Test
 	public void testUseArray2() throws CoreException
 	{
 		// @formatter:off
@@ -2656,6 +2862,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the array literal notation [].", 1, IMarker.SEVERITY_WARNING, 21);
 	}
 
+	@Test
 	public void testUseArray3() throws CoreException
 	{
 		// @formatter:off
@@ -2666,6 +2873,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the array literal notation [].", 1, IMarker.SEVERITY_WARNING, 16);
 	}
 
+	@Test
 	public void testUseArray4() throws CoreException
 	{
 		// @formatter:off
@@ -2676,6 +2884,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the array literal notation [].", 1, IMarker.SEVERITY_WARNING, 9);
 	}
 
+	@Test
 	public void testUseBraces() throws CoreException
 	{
 		// @formatter:off
@@ -2686,6 +2895,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Spaces are hard to count. Use {2}.", 1, IMarker.SEVERITY_WARNING, 15);
 	}
 
+	@Test
 	public void testUsedBeforeA() throws CoreException
 	{
 		setOption("undef", false);
@@ -2700,6 +2910,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'foo' was used before it was defined.", 3, IMarker.SEVERITY_WARNING, 58);
 	}
 
+	@Test
 	public void testUsedBeforeA2() throws CoreException
 	{
 		setOption("undef", false);
@@ -2711,6 +2922,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "'Backbone' was used before it was defined.", 1, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testUsedBeforeAOK1() throws CoreException
 	{
 		// @formatter:off
@@ -2721,6 +2933,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "'Version' was used before it was defined.");
 	}
 
+	@Test
 	public void testUseObject() throws CoreException
 	{
 		// @formatter:off
@@ -2731,6 +2944,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use the object literal notation {}.", 1, IMarker.SEVERITY_WARNING, 14);
 	}
 
+	@Test
 	public void testUseObject2() throws CoreException
 	{
 		// @formatter:off
@@ -2754,6 +2968,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 	// assertProblemExists(items, "'foo' is not a label.", 3, IMarker.SEVERITY_WARNING, 11);
 	// }
 
+	@Test
 	public void testUseOr() throws CoreException
 	{
 		// @formatter:off
@@ -2775,6 +2990,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 	// assertProblemExists(items, "'JSON' is not a function.", 1, IMarker.SEVERITY_WARNING, 0);
 	// }
 
+	@Test
 	public void testUseParam() throws CoreException
 	{
 		// @formatter:off
@@ -2787,6 +3003,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Use a named parameter.", 2, IMarker.SEVERITY_WARNING, 33);
 	}
 
+	@Test
 	public void testuseStrict1() throws CoreException
 	{
 		// @formatter:off
@@ -2799,6 +3016,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Missing 'use strict' statement.", 2, IMarker.SEVERITY_WARNING, 21);
 	}
 
+	@Test
 	public void testuseStrict2() throws CoreException
 	{
 		// @formatter:off
@@ -2821,6 +3039,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblem(items.get(2), msg, 6, IMarker.SEVERITY_WARNING, 79);
 	}
 
+	@Test
 	public void testUseStrictOK() throws CoreException
 	{
 		// @formatter:off
@@ -2839,6 +3058,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Missing 'use strict' statement.");
 	}
 
+	@Test
 	public void testVarANot() throws CoreException
 	{
 		String text = "var chris = blah = 'something';";
@@ -2847,6 +3067,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Variable blah was not declared correctly.", 1, IMarker.SEVERITY_ERROR, 12);
 	}
 
+	@Test
 	public void testVarANot_OK() throws CoreException
 	{
 		String text = "var Events = Backbone.Events = {};";
@@ -2855,6 +3076,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertDoesntContain(items, "Variable  was not declared correctly.");
 	}
 
+	@Test
 	public void testWeirdAssignment() throws CoreException
 	{
 		// @formatter:off
@@ -2866,6 +3088,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird assignment.", 2, IMarker.SEVERITY_WARNING, 13);
 	}
 
+	@Test
 	public void testWeirdCondition1() throws CoreException
 	{
 		// @formatter:off
@@ -2876,6 +3099,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird condition.", 1, IMarker.SEVERITY_WARNING, 14);
 	}
 
+	@Test
 	public void testWeirdCondition2() throws CoreException
 	{
 		// @formatter:off
@@ -2886,6 +3110,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird condition.", 1, IMarker.SEVERITY_WARNING, 14);
 	}
 
+	@Test
 	public void testWeirdCondition3() throws CoreException
 	{
 		// @formatter:off
@@ -2896,6 +3121,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird condition.", 1, IMarker.SEVERITY_WARNING, 14);
 	}
 
+	@Test
 	public void testWeirdCondition4() throws CoreException
 	{
 		// @formatter:off
@@ -2908,6 +3134,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird condition.", 1, IMarker.SEVERITY_WARNING, 4);
 	}
 
+	@Test
 	public void testWeirdNew() throws CoreException
 	{
 		// @formatter:off
@@ -2918,6 +3145,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird construction. Delete 'new'.", 1, IMarker.SEVERITY_WARNING, 14);
 	}
 
+	@Test
 	public void testWeirdProgram1() throws CoreException
 	{
 		// @formatter:off
@@ -2928,6 +3156,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird program.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testWeirdProgram2() throws CoreException
 	{
 		// @formatter:off
@@ -2938,6 +3167,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird program.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testWeirdProgram3() throws CoreException
 	{
 		// @formatter:off
@@ -2948,6 +3178,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird program.", 1, IMarker.SEVERITY_WARNING, 0);
 	}
 
+	@Test
 	public void testWeirdProgram4() throws CoreException
 	{
 		// @formatter:off
@@ -2958,6 +3189,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird program.", 1, IMarker.SEVERITY_WARNING, 6);
 	}
 
+	@Test
 	public void testWeirdRelation1() throws CoreException
 	{
 		// @formatter:off
@@ -2968,6 +3200,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 16);
 	}
 
+	@Test
 	public void testWeirdRelation2() throws CoreException
 	{
 		// @formatter:off
@@ -2978,6 +3211,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testWeirdRelation3() throws CoreException
 	{
 		// @formatter:off
@@ -2988,6 +3222,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testWeirdRelation4() throws CoreException
 	{
 		// @formatter:off
@@ -2998,6 +3233,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testWeirdRelation5() throws CoreException
 	{
 		// @formatter:off
@@ -3008,6 +3244,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testWeirdRelation6() throws CoreException
 	{
 		// @formatter:off
@@ -3018,6 +3255,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testWeirdRelation7() throws CoreException
 	{
 		// @formatter:off
@@ -3028,6 +3266,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testWeirdRelation8() throws CoreException
 	{
 		// @formatter:off
@@ -3038,6 +3277,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird relation.", 1, IMarker.SEVERITY_WARNING, 18);
 	}
 
+	@Test
 	public void testWeirdTernary1() throws CoreException
 	{
 		// @formatter:off
@@ -3048,6 +3288,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird ternary.", 1, IMarker.SEVERITY_WARNING, 23);
 	}
 
+	@Test
 	public void testWeirdTernary2() throws CoreException
 	{
 		// @formatter:off
@@ -3058,6 +3299,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "Weird ternary.", 1, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testWrapImmediate() throws CoreException
 	{
 		// @formatter:off
@@ -3072,6 +3314,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				2, IMarker.SEVERITY_WARNING, 30);
 	}
 
+	@Test
 	public void testWrapImmediateOK() throws CoreException
 	{
 		// @formatter:off
@@ -3085,6 +3328,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				"Wrap an immediate function invocation in parentheses to assist the reader in understanding that the expression is the result of a function, and not the function itself.");
 	}
 
+	@Test
 	public void testWrapRegexp1() throws CoreException
 	{
 		// @formatter:off
@@ -3096,6 +3340,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 26);
 	}
 
+	@Test
 	public void testWrapRegexp2() throws CoreException
 	{
 		// @formatter:off
@@ -3109,6 +3354,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 				IMarker.SEVERITY_WARNING, 27);
 	}
 
+	@Test
 	public void testWriteIsWrong() throws CoreException
 	{
 		// @formatter:off
@@ -3120,6 +3366,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "document.write can be a form of eval.", 2, IMarker.SEVERITY_WARNING, 24);
 	}
 
+	@Test
 	public void testWriteIsWrong2() throws CoreException
 	{
 		// @formatter:off
@@ -3131,6 +3378,7 @@ public class JSLintValidatorTest extends AbstractValidatorTestCase
 		assertProblemExists(items, "document.write can be a form of eval.", 2, IMarker.SEVERITY_WARNING, 24);
 	}
 
+	@Test
 	public void testTISTUD2925() throws CoreException
 	{
 		// @formatter:off

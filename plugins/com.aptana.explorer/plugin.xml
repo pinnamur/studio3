@@ -57,14 +57,6 @@
             class="org.eclipse.ui.navigator.resources.ResourceDragAdapterAssistant"
             viewerId="com.aptana.explorer.view">
       </dragAssistant>
-      <viewerActionBinding
-            viewerId="org.eclipse.ui.navigator.ProjectExplorer">
-         <includes>
-            <actionExtension
-                  pattern="com.aptana.explorer.navigator.actions.DeployActions">
-            </actionExtension>
-         </includes>
-      </viewerActionBinding>
 	</extension>
    <extension
          point="com.aptana.scripting.contextContributors">
@@ -297,32 +289,17 @@
    <extension
          point="org.eclipse.ui.menus">
       <menuContribution
-            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
-         <toolbar
-               id="com.aptana.ui.globalActionSet">
-            <command
-                  commandId="com.aptana.explorer.commands.toggleAppExplorer"
-                  style="toggle">
-               <visibleWhen>
-                  <reference
-                        definitionId="com.aptana.ui.contributions.inGlobalActionSet">
-                  </reference>
-               </visibleWhen>
-            </command>
-         </toolbar>
-      </menuContribution>
-      <menuContribution
             locationURI="popup:com.aptana.explorer.view?before=group.edit">
          <menu
                id="appExplorerShowIn"
-               label="%ShowIn.label">
+               label="%ShowIn.label Show In">
             <dynamic
                   class="com.aptana.ui.commands.OpenFileManagerContributionItem"
                   id="com.aptana.explorer.open.file.manager">
             </dynamic>
             <command
                   commandId="com.aptana.terminal.commands.openTerminal"
-                  label="%command.terminal.label"
+                  label="%command.terminal.label Terminal"
                   style="push">
             </command>
             <visibleWhen

@@ -1,58 +1,51 @@
 /**
  * Aptana Studio
- * Copyright (c) 2005-2012 by Appcelerator, Inc. All Rights Reserved.
+ * Copyright (c) 2005-2014 by Appcelerator, Inc. All Rights Reserved.
  * Licensed under the terms of the GNU Public License (GPL) v3 (with exceptions).
  * Please see the license.html included with this distribution for details.
  * Any modifications to this file must keep this entire header intact.
  */
 package com.aptana.editor.html.contentassist;
 
-import java.io.File;
-import java.net.URI;
-import java.net.URL;
-import java.util.List;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.runtime.CoreException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Position;
-import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.contentassist.IContextInformationValidator;
 import org.eclipse.jface.text.link.LinkedModeModel;
-import org.eclipse.jface.text.source.ISourceViewer;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.widgets.Shell;
-import org.eclipse.ui.part.FileEditorInput;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import com.aptana.core.tests.TestProject;
-import com.aptana.core.util.FileUtil;
+import com.aptana.core.util.CollectionsUtil;
+import com.aptana.core.util.IOUtil;
 import com.aptana.core.util.StringUtil;
-import com.aptana.editor.common.AbstractThemeableEditor;
-import com.aptana.editor.common.contentassist.ILexemeProvider;
 import com.aptana.editor.common.tests.BadDocument;
 import com.aptana.editor.common.tests.util.AssertUtil;
 import com.aptana.editor.html.HTMLMetadataLoader;
 import com.aptana.editor.html.HTMLPlugin;
 import com.aptana.editor.html.HTMLTestUtil;
-import com.aptana.editor.html.contentassist.HTMLContentAssistProcessor.LocationType;
+import com.aptana.editor.html.core.preferences.IPreferenceConstants;
 import com.aptana.editor.html.parsing.lexer.HTMLLexemeProvider;
 import com.aptana.editor.html.parsing.lexer.HTMLTokenType;
-import com.aptana.editor.html.preferences.IPreferenceConstants;
-import com.aptana.editor.html.tests.HTMLEditorBasedTests;
 import com.aptana.parsing.lexer.Lexeme;
-import com.aptana.projects.WebProjectNature;
-import com.aptana.webserver.core.SimpleWebServer;
-import com.aptana.webserver.core.WebServerCorePlugin;
 
-public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
+public class HTMLContentAssistProcessorTest
 {
 
 	private static final int ELEMENT_PROPOSALS_COUNT = 135;
@@ -62,30 +55,32 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 
 	private HTMLContentAssistProcessor fProcessor;
 	private IDocument fDocument;
+	private List<Integer> cursorOffsets;
 
-	@Override
-	protected void setUp() throws Exception
+	@BeforeClass
+	public static void loadMetadata() throws Exception
 	{
-		super.setUp();
-
 		HTMLMetadataLoader loader = new HTMLMetadataLoader();
 		loader.schedule();
 		loader.join();
-
-		fProcessor = new HTMLContentAssistProcessor(null);
-
 	}
 
-	@Override
-	protected void tearDown() throws Exception
+	@Before
+	public void setUp() throws Exception
+	{
+		fProcessor = new HTMLContentAssistProcessor(null);
+	}
+
+	@After
+	public void tearDown() throws Exception
 	{
 		HTMLPlugin.getDefault().getPreferenceStore().setValue(IPreferenceConstants.HTML_REMOTE_HREF_PROPOSALS, true);
 		fProcessor = null;
 		fDocument = null;
-
-		super.tearDown();
+		cursorOffsets = null;
 	}
 
+	@Test
 	public void testGetContextInformationValidator()
 	{
 		IContextInformationValidator validator = fProcessor.getContextInformationValidator();
@@ -94,59 +89,70 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 		assertEquals(validator, fProcessor.getContextInformationValidator());
 	}
 
+	@Test
 	public void testEmptyDocument()
 	{
 		assertCompletionCorrect("|", '\t', 0, null, StringUtil.EMPTY, null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testLinkProposal()
 	{
 		assertCompletionCorrect("<|", '\t', ELEMENT_PROPOSALS_COUNT, "a", "<a></a>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEProposal1()
 	{
 		assertCompletionCorrect("<!|", '\t', ELEMENT_PROPOSALS_COUNT, "!DOCTYPE", "<!DOCTYPE >", new Point(10, 0)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEProposal2()
 	{
 		assertCompletionCorrect("<!D|", '\t', ELEMENT_PROPOSALS_COUNT, "!DOCTYPE", "<!DOCTYPE >", new Point(10, 0)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEProposal3()
 	{
 		assertCompletionCorrect(
 				"<!D| html>", '\t', ELEMENT_PROPOSALS_COUNT, "!DOCTYPE", "<!DOCTYPE html>", new Point(10, 0)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEProposal4()
 	{
 		assertCompletionCorrect("<|>", '\t', ELEMENT_PROPOSALS_COUNT, "!DOCTYPE", "<!DOCTYPE >", new Point(10, 0)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEProposal5()
 	{
 		assertCompletionCorrect("<!|>", '\t', ELEMENT_PROPOSALS_COUNT, "!DOCTYPE", "<!DOCTYPE >", new Point(10, 0)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEProposal6()
 	{
 		assertCompletionCorrect(
 				"<!D|OCTYP >", '\t', ELEMENT_PROPOSALS_COUNT, "!DOCTYPE", "<!DOCTYPE >", new Point(10, 0)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEProposal7()
 	{
 		assertCompletionCorrect(
 				"<!D|OCTYPE >", '\t', ELEMENT_PROPOSALS_COUNT, "!DOCTYPE", "<!DOCTYPE >", new Point(10, 0)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEValueReplacement1()
 	{
 		assertCompletionCorrect("<!DOCTYPE |html>", '\t', DOCTYPE_PROPOSALS_COUNT, "HTML 5", "<!DOCTYPE HTML>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDOCTYPEValueReplacement2()
 	{
 		assertCompletionCorrect(
@@ -154,173 +160,203 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 				'\t', DOCTYPE_PROPOSALS_COUNT, "HTML 5", "<!DOCTYPE HTML>", null); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
+	@Test
 	public void testABBRProposal1()
 	{
 		assertCompletionCorrect("<a|>", '\t', ELEMENT_PROPOSALS_COUNT, "abbr", "<abbr></abbr>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testABBRProposal2()
 	{
 		assertCompletionCorrect("<A|>", '\t', ELEMENT_PROPOSALS_COUNT, "abbr", "<abbr></abbr>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testElementWhichIsClosedProposal()
 	{
 		assertCompletionCorrect("<|></a>", '\t', ELEMENT_PROPOSALS_COUNT, "a", "<a></a>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testElementWhichIsClosedProposal2()
 	{
 		assertCompletionCorrect("<|></a>", '\t', ELEMENT_PROPOSALS_COUNT, "abbr", "<abbr></abbr></a>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testElementWhichIsClosedProposal3()
 	{
 		assertCompletionCorrect("<|</a>", '\t', ELEMENT_PROPOSALS_COUNT, "abbr", "<abbr></abbr></a>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testElementWhichIsClosedProposal4()
 	{
 		assertCompletionCorrect("<b><a><|</b>", '\t', ELEMENT_PROPOSALS_COUNT + 1, "/a", "<b><a></a></b>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testElementWhichIsClosedProposal5()
 	{
 		assertCompletionCorrect("<b><a><|></b>", '\t', ELEMENT_PROPOSALS_COUNT + 1, "/a", "<b><a></a></b>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testElementWhichIsClosedProposal6()
 	{
 		assertCompletionCorrect("<b><a></|</b>", '\t', 1, "/a", "<b><a></a></b>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testSuggestOnlyUnclosedTagForCloseTagWithNoElementName()
 	{
 		assertCompletionCorrect("<b><a></|></b>", '\t', 1, "/a", "<b><a></a></b>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testSuggestOnlyUnclosedTagForCloseTagWithElementName()
 	{
 		assertCompletionCorrect("<b><a></a|</b>", '\t', 1, "/a", "<b><a></a></b>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testSuggestAllPossibleCloseTagsOnExistingCloseTagRegardlessOfPrefix()
 	{
 		assertCompletionCorrect("<b><a></a|></b>", '\t', CLOSE_TAG_PROPOSALS_COUNT, "/a", "<b><a></a></b>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testCloseTagWithNoUnclosedTagsProposal()
 	{
 		assertCompletionCorrect("</|>", '\t', CLOSE_TAG_PROPOSALS_COUNT, "/ul", "</ul>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testNoSuggestionsInTextAreaBetweenTags()
 	{
 		assertCompletionCorrect("<p>|</p>", '\t', 0, null, "<p></p>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testNoSuggestionsInTextAreaWithWhitespaceBetweenTags()
 	{
 		assertCompletionCorrect("<p>\n  |\n</p>", '\t', 0, null, "<p>\n  \n</p>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testOnlySuggestEntityIfPrecededByAmpersand()
 	{
 		assertCompletionCorrect("<p>\n  &|\n</p>", '\t', ENTITY_PROPOSAL_COUNT, "&amp;", "<p>\n  &amp;\n</p>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testEntitySuggestionWithNoSurroundingWhitespace()
 	{
 		assertCompletionCorrect("<div>&|</div>", '\t', ENTITY_PROPOSAL_COUNT, "&amp;", "<div>&amp;</div>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testExistingEntityGetsFullyReplaced1()
 	{
 		assertCompletionCorrect(
 				"<body>\n  &a|acute;\n</body>", '\t', ENTITY_PROPOSAL_COUNT, "&acirc;", "<body>\n  &acirc;\n</body>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testExistingEntityGetsFullyReplaced2()
 	{
 		assertCompletionCorrect("<div>&a|acute;</div>", '\t', ENTITY_PROPOSAL_COUNT, "&amp;", "<div>&amp;</div>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testEntityDoesntReplaceNonEntityText()
 	{
 		assertCompletionCorrect(
 				"<div>ind&u|stria</div>", '\t', ENTITY_PROPOSAL_COUNT, "&uacute;", "<div>ind&uacute;stria</div>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testProposalsBadLocation()
 	{
 		String document = "<body>&|";
 		int offset = HTMLTestUtil.findCursorOffset(document);
 		fDocument = HTMLTestUtil.createBadDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
 
 		// offset is outside document size
 		((BadDocument) fDocument).setThrowBadLocation(true);
-		fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		fProcessor.doComputeCompletionProposals(textViewer(), offset, '\t', false);
 	}
 
+	@Test
 	public void testIMGProposal()
 	{
 		assertCompletionCorrect("<|", '\t', ELEMENT_PROPOSALS_COUNT, "img", "<img />", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testHTML5DoctypeProposal()
 	{
 		assertCompletionCorrect("<!doctype |>", '\t', DOCTYPE_PROPOSALS_COUNT, "HTML 5", "<!doctype HTML>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testHTML401StrictDoctypeProposal()
 	{
 		assertCompletionCorrect("<!DOCTYPE |", '\t', DOCTYPE_PROPOSALS_COUNT, "HTML 4.01 Strict", //$NON-NLS-1$ //$NON-NLS-2$
 				"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\"\n\"http://www.w3.org/TR/html4/strict.dtd\"", null); //$NON-NLS-1$
 	}
 
+	@Test
 	public void testStyleAttributeProposalWithNoPrefix()
 	{
 		assertCompletionCorrect("<div |></div>", '\t', 64, "style", "<div style=\"\"></div>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testStyleAttributeProposalOnSelfClosingTag()
 	{
 		assertCompletionCorrect("<br |/>", '\t', 8, "style", "<br style=\"\"/>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testStyleAttributeProposalOnSelfClosingTagWithTrailingSpaceAfterCursor()
 	{
 		assertCompletionCorrect("<br | />", '\t', 8, "style", "<br style=\"\" />", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testStyleAttributeProposalWithPrefix()
 	{
 		assertCompletionCorrect("<div sty|></div>", '\t', 64, "style", "<div style=\"\"></div>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testStyleAttributeProposalWithPrefixAndTrailingEquals()
 	{
 		assertCompletionCorrect("<div sty|=\"\"></div>", '\t', 64, "style", "<div style=\"\"></div>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDontOverwriteTagEnd1()
 	{
 		assertCompletionCorrect("<div dir=\"|></div>", '\t', 2, "ltr", "<div dir=\"ltr\"></div>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
+	@Test
 	public void testDontOverwriteTagEnd2()
 	{
 		assertCompletionCorrect("<br dir=\"|/>", '\t', 2, "ltr", "<br dir=\"ltr\"/>", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
 	@SuppressWarnings("rawtypes")
+	@Test
 	public void testStyleAttributeProposalHasExitTabstopAfterQuotes()
 	{
 		assertCompletionCorrect("<div |>", '\t', 64, "style", "<div style=\"\">", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		// Now test that we have two tabstops. One inside the quotes, one just after
-		LinkedModeModel model = LinkedModeModel.getModel(document, 12);
+		LinkedModeModel model = LinkedModeModel.getModel(fDocument, 12);
 		assertNotNull(model);
 		List list = model.getTabStopSequence();
 		assertNotNull(list);
@@ -335,12 +371,13 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 	}
 
 	@SuppressWarnings("rawtypes")
+	@Test
 	public void testEventProposalHasExitTabstopAfterQuotes()
 	{
 		assertCompletionCorrect("<div |>", '\t', 64, "onmouseenter", "<div onmouseenter=\"\">", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		// Now test that we have two tabstops. One inside the quotes, one just after
-		LinkedModeModel model = LinkedModeModel.getModel(document, 19);
+		LinkedModeModel model = LinkedModeModel.getModel(fDocument, 19);
 		assertNotNull(model);
 		List list = model.getTabStopSequence();
 		assertNotNull(list);
@@ -355,593 +392,164 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 	}
 
 	// https://aptana.lighthouseapp.com/projects/35272/tickets/1719-html-code-completion-for-tag-attributes-goes-wrong
+	@Test
 	public void testIMGSrcContentAssistDoesntAutoInsertCloseTag()
 	{
 		String document = "<div><img src='|' />";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete(document, '\t');
 		assertEquals(0, proposals.length);
 	}
 
-	public void testLinkHREFFolderProposal() throws Exception
+	/**
+	 * Returns the first offset.
+	 * 
+	 * @return
+	 */
+	private int getOffset()
 	{
-		assertHREFProposal("<link rel=\"stylesheet\" href=\"|\" />", "<link rel=\"stylesheet\" href=\"folder\" />",
-				"folder");
-	}
-
-	public void testLinkHREFFileProposal() throws Exception
-	{
-		assertHREFProposal("<link rel='stylesheet' href='|' />", "<link rel='stylesheet' href='root.css' />",
-				"root.css");
-
-	}
-
-	public void testLinkHREFFileUnderFolderProposal() throws Exception
-	{
-		assertHREFProposal("<link rel='stylesheet' href='folder/|' />",
-				"<link rel='stylesheet' href='folder/inside_folder.css' />", "inside_folder.css");
-
-	}
-
-	public void testLinkHREFFileProposalWithPrefix() throws Exception
-	{
-		assertHREFProposal("<link rel='stylesheet' href='roo|' />", "<link rel='stylesheet' href='root.css' />",
-				"root.css");
-
-	}
-
-	public void testLinkHREFFolderProposalWithPrefix() throws Exception
-	{
-		assertHREFProposal("<link rel='stylesheet' href='fo|' />", "<link rel='stylesheet' href='folder' />", "folder");
-
-	}
-
-	public void testLinkHREFFileInsideFolderProposalWithPrefix() throws Exception
-	{
-		assertHREFProposal("<link rel='stylesheet' href='folder/in|' />",
-				"<link rel='stylesheet' href='folder/inside_folder.css' />", "inside_folder.css");
-	}
-
-	public void testApstud2959() throws Exception
-	{
-		String document = "<a href='http://|' />";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		TestProject project = new TestProject("Apstud2959", new String[] { WebProjectNature.ID });
-		final IFile file = project.createFile("testApstud2959", "");
-		project.createFolder("email");
-
-		fProcessor = new HTMLContentAssistProcessor(null)
+		if (CollectionsUtil.isEmpty(this.cursorOffsets))
 		{
-			@Override
-			protected URI getURI()
-			{
-				return file.getRawLocationURI();
-			}
-		};
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-		assertEquals(0, proposals.length);
-
-		project.delete();
-	}
-
-	public void testRootFileSystemForHREF() throws Exception
-	{
-		String document = "<a href='file://|' />";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		IFileStore root = EFS.getLocalFileSystem().getStore(Path.ROOT);
-		String[] names = root.childNames(EFS.NONE, null);
-		int count = 0;
-		for (String name : names)
-		{
-			if (name.startsWith("."))
-			{
-				continue;
-			}
-			count++;
+			throw new IllegalStateException("Must have cursor offsets parsed out already!");
 		}
-		fProcessor = new HTMLContentAssistProcessor(null)
+		return this.cursorOffsets.get(0);
+	}
+
+	private ITextViewer textViewer()
+	{
+		if (fDocument == null)
 		{
-			@Override
-			protected URI getURI()
-			{
-				// Shouldn't be necessary...
-				return new File(FileUtil.getTempDirectory().toOSString(), "file.html").toURI();
-			}
-		};
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-		assertEquals(count, proposals.length);
-
-	}
-
-	public void testRootFileSystemForHREFBadPrefix() throws Exception
-	{
-		// Busted scheme
-		String document = "<a href='file:/|' />";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		fProcessor = new HTMLContentAssistProcessor(null)
-		{
-			@Override
-			protected URI getURI()
-			{
-				// Shouldn't be necessary...
-				return new File(FileUtil.getTempDirectory().toOSString(), "file.html").toURI();
-			}
-		};
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-		assertEquals(0, proposals.length);
-
-	}
-
-	public void testServerHREF() throws Exception
-	{
-		// Generate some folders/files to use as proposals
-		TestProject project = createWebProject("href_file_proposal");
-		final IFile file = project.createFile("test.html", "<link rel='stylesheet' href='/|' />");
-		this.setupTestContext(file);
-
-		SimpleWebServer server = new SimpleWebServer();
-		server.setDocumentRoot(project.getURI());
-		server.setBaseURL(new URL("http://www.test.com/"));
-		WebServerCorePlugin.getDefault().getServerManager().add(server);
-
-		int offset = this.cursorOffsets.get(0);
-		ITextViewer viewer = AssertUtil.createTextViewer(document);
-		ICompletionProposal[] proposals = processor.doComputeCompletionProposals(viewer, offset, '\t', false);
-
-		AssertUtil.assertProposalFound("file.html", proposals);
-		AssertUtil.assertProposalFound("root.css", proposals);
-		AssertUtil.assertProposalFound("folder", proposals);
-		AssertUtil.assertProposalApplies("<link rel='stylesheet' href='/folder' />", document, "folder", proposals,
-				offset, null);
-
-		WebServerCorePlugin.getDefault().getServerManager().remove(server);
-		project.delete();
-
-	}
-
-	public void testRailsServerHREF() throws Exception
-	{
-		// Generate some folders/files to use as proposals
-		TestProject project = createWebProject("href_file_proposal");
-		project.createFolder("public");
-		project.createFile("public/railsfile.html", "");
-		final IFile file = project.createFile("test.html", "<link rel='stylesheet' href='/|' />");
-		this.setupTestContext(file);
-
-		int offset = this.cursorOffsets.get(0);
-		ITextViewer viewer = AssertUtil.createTextViewer(document);
-		ICompletionProposal[] proposals = processor.doComputeCompletionProposals(viewer, offset, '\t', false);
-
-		AssertUtil.assertProposalFound("railsfile.html", proposals);
-		AssertUtil.assertProposalApplies("<link rel='stylesheet' href='/railsfile.html' />", document,
-				"railsfile.html", proposals, offset, null);
-
-		project.delete();
-
-	}
-
-	public void testRootFileSystemForHREFWithFolderPrefix() throws Exception
-	{
-		// Generate some folders/files to use as proposals
-		TestProject project = new TestProject("href_file_proposal", new String[] { WebProjectNature.ID });
-		final IFolder folder = project.createFolder("folder");
-
-		String fileUri = folder.getRawLocationURI().toString();
-		fileUri = fileUri.replace("file:/", "file://");
-		String document = "<link rel='stylesheet' href='" + fileUri + "/|' />";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		project.createFile("folder/inside_folder.css", "");
-
-		final IFile file = project.createFile("file.html", "");
-
-		fProcessor = new HTMLContentAssistProcessor(null)
-		{
-			@Override
-			protected URI getURI()
-			{
-				return file.getRawLocationURI();
-			}
-		};
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-		assertEquals(1, proposals.length);
-		AssertUtil.assertProposalFound("inside_folder.css", proposals);
-		AssertUtil.assertProposalApplies("<link rel='stylesheet' href='" + fileUri + "/inside_folder.css' />",
-				fDocument, "inside_folder.css", proposals, offset, null);
-
-		project.delete();
-	}
-
-	public void testRootFileSystemForHREFWithFolderAndFilePrefix() throws Exception
-	{
-		// Generate some folders/files to use as proposals
-		TestProject project = new TestProject("href_file_proposal", new String[] { WebProjectNature.ID });
-		final IFolder folder = project.createFolder("folder");
-
-		String fileUri = folder.getLocationURI().toString();
-		fileUri = fileUri.replace("file:/", "file://");
-		String document = "<link rel='stylesheet' href='" + fileUri + "/inside|' />";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		project.createFile("folder/inside_folder.css", "");
-
-		final IFile file = project.createFile("file.html", "");
-
-		fProcessor = new HTMLContentAssistProcessor(null)
-		{
-			@Override
-			protected URI getURI()
-			{
-				return file.getLocationURI();
-			}
-		};
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-		assertEquals(1, proposals.length);
-
-		AssertUtil.assertProposalFound("inside_folder.css", proposals);
-		AssertUtil.assertProposalApplies("<link rel='stylesheet' href='" + fileUri + "/inside_folder.css' />",
-				fDocument, "inside_folder.css", proposals, offset, null);
-
-		project.delete();
-
-	}
-
-	public void testNoProposalsForHTTPURIPath() throws Exception
-	{
-		TestProject project = null;
-		try
-		{
-			// The "project" the file we're working on sits in.
-			project = new TestProject("href_http_doesnt_fetch", new String[] { WebProjectNature.ID });
-			final IFile file = project.createFile("file.html", "");
-
-			// Set up document/file
-			String document = "<link rel='stylesheet' href='http://www.aptana.com/|' />";
-			int offset = HTMLTestUtil.findCursorOffset(document);
-			fDocument = HTMLTestUtil.createDocument(document, true);
-			ITextViewer viewer = createTextViewer(fDocument);
-			fProcessor = new HTMLContentAssistProcessor(null)
-			{
-				@Override
-				protected URI getURI()
-				{
-					return file.getLocationURI();
-				}
-
-				@Override
-				protected boolean efsFileSystemCanGrabChildren(String scheme)
-				{
-					// Verify that we can't grab children as a means of making sure we don't call fetchInfo or hit
-					// remote URI.
-					boolean result = super.efsFileSystemCanGrabChildren(scheme);
-					assertFalse(result);
-					return result;
-				}
-
-				@Override
-				protected List<ICompletionProposal> suggestChildrenOfFileStore(int offset, String valuePrefix,
-						URI editorStoreURI, IFileStore parent) throws CoreException
-				{
-					fail("We asked for children of an HTTP URI!");
-					return super.suggestChildrenOfFileStore(offset, valuePrefix, editorStoreURI, parent);
-				}
-			};
-
-			// FIXME do a more solid check that we don't call fetchInfo on the filestore. We're hacking around it with
-			// our assertion in efsFileSystemCanGrabChildren
-			ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-			assertEquals(0, proposals.length);
+			throw new IllegalStateException("fDocument must be set first!");
 		}
-		finally
-		{
-			if (project != null)
-			{
-				project.delete();
-			}
-		}
+		return new com.aptana.editor.common.tests.TextViewer(fDocument);
 	}
 
-	public void testDontHitRemoteURIForChildrenIfPrefIsTurnedOff() throws Exception
-	{
-		TestProject project = null;
-		try
-		{
-			// The "project" the file we're working on sits in.
-			project = new TestProject("href_dont_hit_remote", new String[] { WebProjectNature.ID });
-			final IFile file = project.createFile("file.html", "");
-
-			// Set up document/file
-			String document = "<link rel='stylesheet' href='ftp://ftp.cs.brown.edu/|' />";
-			int offset = HTMLTestUtil.findCursorOffset(document);
-			fDocument = HTMLTestUtil.createDocument(document, true);
-			ITextViewer viewer = createTextViewer(fDocument);
-			fProcessor = new HTMLContentAssistProcessor(null)
-			{
-				@Override
-				protected URI getURI()
-				{
-					return file.getLocationURI();
-				}
-
-				@Override
-				protected List<ICompletionProposal> suggestChildrenOfFileStore(int offset, String valuePrefix,
-						URI editorStoreURI, IFileStore parent) throws CoreException
-				{
-					fail("We asked for children of a remote URI when we had that preference turned off!");
-					return super.suggestChildrenOfFileStore(offset, valuePrefix, editorStoreURI, parent);
-				}
-			};
-
-			// Turn off hitting remote
-			HTMLPlugin.getDefault().getPreferenceStore()
-					.setValue(IPreferenceConstants.HTML_REMOTE_HREF_PROPOSALS, false);
-
-			ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-			assertEquals(0, proposals.length);
-		}
-		finally
-		{
-			if (project != null)
-			{
-				project.delete();
-			}
-		}
-	}
-
-	public void testNoProposalsForURIEndingInColonSlash() throws Exception
-	{
-		TestProject project = null;
-		try
-		{
-			// The "project" the file we're working on sits in.
-			project = new TestProject("href_http_doesnt_fetch", new String[] { WebProjectNature.ID });
-			final IFile file = project.createFile("file.html", "");
-			project.createFolder("folder");
-
-			// Set up document/file
-			String document = "<link rel='stylesheet' href='file:/|' />";
-			int offset = HTMLTestUtil.findCursorOffset(document);
-			fDocument = HTMLTestUtil.createDocument(document, true);
-			ITextViewer viewer = createTextViewer(fDocument);
-			fProcessor = new HTMLContentAssistProcessor(null)
-			{
-				@Override
-				protected URI getURI()
-				{
-					return file.getLocationURI();
-				}
-			};
-
-			ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-			assertEquals(0, proposals.length);
-		}
-		finally
-		{
-			if (project != null)
-			{
-				project.delete();
-			}
-		}
-	}
-
-	private void assertHREFProposal(String source, String expected, String proposalToChoose) throws Exception
-	{
-		// Generate some folders/files to use as proposals
-		TestProject project = createWebProject("href_file_proposal");
-		final IResource file = project.createFile("test.html", source);
-		IFileStore fileStore = EFS.getStore(file.getRawLocationURI());
-		this.setupTestContext(fileStore);
-
-		int offset = this.cursorOffsets.get(0);
-		ITextViewer viewer = AssertUtil.createTextViewer(document);
-		ICompletionProposal[] proposals = processor.doComputeCompletionProposals(viewer, offset, '\t', false);
-
-		AssertUtil.assertProposalFound(proposalToChoose, proposals);
-		AssertUtil.assertProposalApplies(expected, document, proposalToChoose, proposals, offset, null);
-
-		project.delete();
-	}
-
+	@Test
 	public void testAttributeNameAtSpace()
 	{
-		String document = "<p | align=\"\"></p>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<p | align=\"\"></p>");
 		assertTrue(proposals.length > 0);
 		AssertUtil.assertProposalFound("class", proposals);
 	}
 
+	@Test
 	public void testAttributeNameAtSpace2()
 	{
-		String document = "<p align=\"\" | ></p>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<p align=\"\" | ></p>");
 		assertTrue(proposals.length > 0);
 		AssertUtil.assertProposalFound("class", proposals);
 	}
 
+	@Test
 	public void testAttributeAfterElementName()
 	{
-		String document = "<body s|></body>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<body s|></body>");
 		assertTrue(proposals.length > 0);
 		AssertUtil.assertProposalFound("scroll", proposals);
 	}
 
+	@Test
 	public void testAttributeValueProposals()
 	{
-		String document = "<li><a class=|</li>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<li><a class=|</li>");
 		assertTrue(proposals.length == 0);
 	}
 
+	@Test
 	public void testAttributeValueProposalsBeforeEquals()
 	{
-		String document = "<li><a clas|s=</li>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<li><a clas|s=</li>");
 		assertTrue(proposals.length > 0);
 	}
 
+	@Test
 	public void testAPSTUD5017()
 	{
-		String document = "<video autoplay=|preload=\"none\"></video>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<video autoplay=|preload=\"none\"></video>");
 		assertTrue(proposals.length >= 1); // "autoplay"
 		// insert the "autoplay" proposal
 		AssertUtil.assertProposalFound("autoplay", proposals);
 		AssertUtil.assertProposalApplies("<video autoplay=\"autoplay\" preload=\"none\"></video>", fDocument,
-				"autoplay", proposals, offset, null);
+				"autoplay", proposals, getOffset(), null);
 	}
 
+	@Test
 	public void testAtrributeValueMidValueNoCloseQuoteAtEOF()
 	{
-		String document = "<script type=\"te|";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<script type=\"te|");
 		assertTrue(proposals.length >= 1); // "text/javascript"
 		// insert the "text/javascript" proposal
 		AssertUtil.assertProposalFound("text/javascript", proposals);
 		AssertUtil.assertProposalApplies("<script type=\"text/javascript\" ", fDocument, "text/javascript", proposals,
-				offset, null);
+				getOffset(), null);
 	}
 
+	@Test
 	public void testAtrributeValueMidValueWithExistingQuotes()
 	{
-		String document = "<script type=\"te|\"";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<script type=\"te|\"");
 		assertTrue(proposals.length >= 1); // "text/javascript"
 		// insert the "text/javascript" proposal
 		AssertUtil.assertProposalFound("text/javascript", proposals);
 		AssertUtil.assertProposalApplies("<script type=\"text/javascript\"", fDocument, "text/javascript", proposals,
-				offset, null);
+				getOffset(), null);
 	}
 
+	@Test
 	public void testAtrributeValueNoValueWithExistingQuotes()
 	{
-		String document = "<script type=\"|\"";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<script type=\"|\"");
 		assertTrue(proposals.length >= 1); // "text/javascript"
 		// insert the "text/javascript" proposal
 		AssertUtil.assertProposalFound("text/javascript", proposals);
 		AssertUtil.assertProposalApplies("<script type=\"text/javascript\"", fDocument, "text/javascript", proposals,
-				offset, null);
+				getOffset(), null);
 	}
 
+	@Test
 	public void testAtrributeValueNoValueNoQuotes()
 	{
-		String document = "<script type=|";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<script type=|");
 		assertTrue(proposals.length >= 1); // "text/javascript"
 		// insert the "text/javascript" proposal
 		AssertUtil.assertProposalFound("text/javascript", proposals);
 		AssertUtil.assertProposalApplies("<script type=\"text/javascript\"", fDocument, "text/javascript", proposals,
-				offset, null);
+				getOffset(), null);
 	}
 
+	@Test
 	public void testAtrributeValueNoValueLeadingSingleQuoteTrailingGT()
 	{
-		String document = "<script type='|>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<script type='|>");
 		assertTrue(proposals.length >= 1); // "text/javascript"
 		// insert the "text/javascript" proposal
 		AssertUtil.assertProposalFound("text/javascript", proposals);
 		AssertUtil.assertProposalApplies("<script type='text/javascript'>", fDocument, "text/javascript", proposals,
-				offset, null);
+				getOffset(), null);
 	}
 
+	@Test
 	public void testAtrributeValuePartialValueNoLeadingQuote()
 	{
-		String document = "<link rel=alt| />";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<link rel=alt| />");
 		assertTrue(proposals.length >= 1); // "alternate"
 		// insert the "alternate" proposal
 		AssertUtil.assertProposalFound("alternate", proposals);
-		AssertUtil.assertProposalApplies("<link rel=\"alternate\" />", fDocument, "alternate", proposals, offset,
+		AssertUtil.assertProposalApplies("<link rel=\"alternate\" />", fDocument, "alternate", proposals, getOffset(),
 				new Point(21, 0));
 	}
 
+	@Test
 	public void testAtrributeValueNoValueWrappingSingleQuoteTrailingAttributeName()
 	{
-		String document = "<script type='|'id='1'>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
+		ICompletionProposal[] proposals = complete("<script type='|'id='1'>");
 		assertTrue(proposals.length >= 1); // "text/javascript"
 		// insert the "text/javascript" proposal
 		AssertUtil.assertProposalFound("text/javascript", proposals);
 		AssertUtil.assertProposalApplies("<script type='text/javascript'id='1'>", fDocument, "text/javascript",
-				proposals, offset, null);
+				proposals, getOffset(), null);
 	}
 
-	// public void testAtrributeValueNoValueLeadingSingleQuoteTrailingAttributeName()
+	// @Test public void testAtrributeValueNoValueLeadingSingleQuoteTrailingAttributeName()
 	// {
 	// String document = "<script type='|id='1'>";
 	// int offset = HTMLTestUtil.findCursorOffset(document);
@@ -956,86 +564,7 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 	// proposals, offset, null);
 	// }
 
-	public void testRelativeHREFFileProposals() throws Exception
-	{
-		// FIXME I need to set up files on the filesystem and relative to editor to test those!
-
-		String document = "<a href=\"|\"></a>";
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-		ITextViewer viewer = createTextViewer(fDocument);
-
-		final File tmpFile = File.createTempFile("test", ".html");
-		tmpFile.deleteOnExit();
-
-		File sibling = new File(tmpFile.getParentFile(), "sibling.html");
-		sibling.createNewFile();
-		sibling.deleteOnExit();
-
-		fProcessor = new HTMLContentAssistProcessor(null)
-		{
-			@Override
-			protected URI getURI()
-			{
-				return tmpFile.toURI();
-			}
-		};
-
-		ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, offset, '\t', false);
-		assertTrue(proposals.length > 0);
-		AssertUtil.assertProposalFound("sibling.html", proposals);
-	}
-
-	public void testIsValidAutoActivationLocationElement()
-	{
-
-		// need to close previous editor
-		String source = "<a|>";
-
-		IFileStore fileStore = createFileStore("proposal_tests", "html", source);
-		this.setupTestContext(fileStore);
-		int offset = this.cursorOffsets.get(0);
-
-		// starting to type an attribute
-		assertTrue(processor.isValidAutoActivationLocation(' ', ' ', document, offset));
-		assertTrue(processor.isValidAutoActivationLocation('\t', '\t', document, offset));
-		assertFalse(processor.isValidAutoActivationLocation('b', 'b', document, offset));
-	}
-
-	public void testIsValidAutoActivationLocationAttribute()
-	{
-		String source = "<a |>";
-		IFileStore fileStore = createFileStore("proposal_tests", "html", source);
-		this.setupTestContext(fileStore);
-		int offset = this.cursorOffsets.get(0);
-
-		// starting to type an attribute
-		assertTrue(processor.isValidAutoActivationLocation('b', 'b', document, offset));
-
-	}
-
-	public void testIsValidAutoActivationLocationAttributeValue()
-	{
-		String source = "<a class=\"|\"|>";
-		IFileStore fileStore = createFileStore("proposal_tests", "html", source);
-		this.setupTestContext(fileStore);
-		int offset = this.cursorOffsets.get(0);
-
-		// starting to type an attribute value
-		assertTrue(processor.isValidAutoActivationLocation('f', 'f', document, offset));
-	}
-
-	public void testIsValidAutoActivationLocationText()
-	{
-		// need to close previous editor
-		String source = "<a>|";
-		IFileStore fileStore = createFileStore("proposal_tests", "html", source);
-		this.setupTestContext(fileStore);
-		int offset = this.cursorOffsets.get(0);
-
-		assertFalse(processor.isValidAutoActivationLocation('t', 't', document, offset));
-	}
-
+	@Test
 	public void testIsValidIdentifier()
 	{
 		assertTrue(fProcessor.isValidIdentifier('a', 'a'));
@@ -1047,74 +576,53 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 		assertFalse(fProcessor.isValidIdentifier(' ', ' '));
 	}
 
-	public void testAPSTUD3862() throws Exception
-	{
-		TestProject project = createWebProject("3862_");
-		try
-		{
-			project.createFolder("public");
-			project.createFolder("public/css");
-			project.createFolder("application");
-			IFile file = project.createFile("index.html", "<img src=\"/img/\" />\n");
-
-			AbstractThemeableEditor editor = (AbstractThemeableEditor) createEditor(new FileEditorInput(file));
-			fProcessor = new HTMLContentAssistProcessor(editor);
-			ISourceViewer viewer = editor.getISourceViewer();
-			ICompletionProposal[] proposals = fProcessor.doComputeCompletionProposals(viewer, 15, '\t', false);
-
-			assertEquals(
-					"src value prefix refers to non-existant subfolder, but we incorrectly suggested children anyways",
-					0, proposals.length);
-		}
-		finally
-		{
-			project.delete();
-		}
-	}
-
-	protected ITextViewer createTextViewer(IDocument fDocument)
-	{
-		ITextViewer viewer = new TextViewer(new Shell(), SWT.NONE);
-		viewer.setDocument(fDocument);
-		return viewer;
-	}
-
-	protected void assertLocation(String document, LocationType location)
-	{
-		int offset = HTMLTestUtil.findCursorOffset(document);
-		fDocument = HTMLTestUtil.createDocument(document, true);
-
-		ILexemeProvider<HTMLTokenType> lexemeProvider = HTMLTestUtil.createLexemeProvider(fDocument, offset);
-		LocationType l = fProcessor.getOpenTagLocationType(lexemeProvider, offset);
-
-		assertEquals(location, l);
-	}
-
-	protected void assertCompletionCorrect(String source, char trigger, int proposalCount, String proposalToChoose,
+	private void assertCompletionCorrect(String source, char trigger, int proposalCount, String proposalToChoose,
 			String postCompletion, Point point)
 	{
-		IFileStore fileStore = createFileStore("proposal_tests", "html", source);
-		this.setupTestContext(fileStore);
-
-		int offset = this.cursorOffsets.get(0);
-		ITextViewer viewer = AssertUtil.createTextViewer(document);
-		ICompletionProposal[] proposals = processor.doComputeCompletionProposals(viewer, offset, trigger, false);
-
+		ICompletionProposal[] proposals = complete(source, trigger);
 		assertEquals(proposalCount, proposals.length);
 		if (proposalToChoose != null)
 		{
 			AssertUtil.assertProposalFound(proposalToChoose, proposals);
-			AssertUtil.assertProposalApplies(postCompletion, document, proposalToChoose, proposals, offset, point);
+			AssertUtil
+					.assertProposalApplies(postCompletion, fDocument, proposalToChoose, proposals, getOffset(), point);
 		}
 	}
 
-	public void testDoubleQuotedEventAttributeValueType()
+	private ICompletionProposal[] complete(String source)
+	{
+		return complete(source, '\t');
+	}
+
+	private ICompletionProposal[] complete(String source, char trigger)
+	{
+		setupDocument(source);
+
+		return fProcessor.doComputeCompletionProposals(textViewer(), getOffset(), trigger, false);
+	}
+
+	/**
+	 * Given source, we will wrap it in an IDocument, strip out "cursor" offsets, and partition the document.
+	 * 
+	 * @param source
+	 * @return
+	 */
+	private IDocument setupDocument(String source)
+	{
+		fDocument = new Document(source);
+		handleCursorOffsets(fDocument);
+		HTMLTestUtil.attachPartitioner(fDocument);
+		return fDocument;
+	}
+
+	@Test
+	public void testDoubleQuotedEventAttributeValueType() throws Exception
 	{
 		setupTestContext("contentAssist/js-event-attribute-double-quoted.html");
 
 		for (int offset : cursorOffsets)
 		{
-			HTMLLexemeProvider lexemeProvider = processor.createLexemeProvider(document, offset);
+			HTMLLexemeProvider lexemeProvider = fProcessor.createLexemeProvider(fDocument, offset);
 			Lexeme<HTMLTokenType> lexeme = lexemeProvider.getLexemeFromOffset(offset);
 
 			assertNotNull(lexeme);
@@ -1124,13 +632,21 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 		}
 	}
 
-	public void testSingleQuotedEventAttributeValueType()
+	private void setupTestContext(String resource) throws IOException
+	{
+		String source = IOUtil.read(FileLocator.openStream(HTMLPlugin.getDefault().getBundle(),
+				Path.fromPortableString(resource), false));
+		setupDocument(source);
+	}
+
+	@Test
+	public void testSingleQuotedEventAttributeValueType() throws Exception
 	{
 		setupTestContext("contentAssist/js-event-attribute-single-quoted.html");
 
 		for (int offset : cursorOffsets)
 		{
-			HTMLLexemeProvider lexemeProvider = processor.createLexemeProvider(document, offset);
+			HTMLLexemeProvider lexemeProvider = fProcessor.createLexemeProvider(fDocument, offset);
 			Lexeme<HTMLTokenType> lexeme = lexemeProvider.getLexemeFromOffset(offset);
 
 			assertNotNull(lexeme);
@@ -1140,13 +656,14 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 		}
 	}
 
-	public void testDoubleQuotedStyleAttributeValueType()
+	@Test
+	public void testDoubleQuotedStyleAttributeValueType() throws Exception
 	{
 		setupTestContext("contentAssist/css-style-attribute-double-quoted.html");
 
 		for (int offset : cursorOffsets)
 		{
-			HTMLLexemeProvider lexemeProvider = processor.createLexemeProvider(document, offset);
+			HTMLLexemeProvider lexemeProvider = fProcessor.createLexemeProvider(fDocument, offset);
 			Lexeme<HTMLTokenType> lexeme = lexemeProvider.getLexemeFromOffset(offset);
 
 			assertNotNull(lexeme);
@@ -1156,13 +673,14 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 		}
 	}
 
-	public void testSingleQuotedStyleAttributeValueType()
+	@Test
+	public void testSingleQuotedStyleAttributeValueType() throws Exception
 	{
 		setupTestContext("contentAssist/css-style-attribute-single-quoted.html");
 
 		for (int offset : cursorOffsets)
 		{
-			HTMLLexemeProvider lexemeProvider = processor.createLexemeProvider(document, offset);
+			HTMLLexemeProvider lexemeProvider = fProcessor.createLexemeProvider(fDocument, offset);
 			Lexeme<HTMLTokenType> lexeme = lexemeProvider.getLexemeFromOffset(offset);
 
 			assertNotNull(lexeme);
@@ -1171,4 +689,36 @@ public class HTMLContentAssistProcessorTest extends HTMLEditorBasedTests
 			assertEquals(29, lexeme.getEndingOffset());
 		}
 	}
+
+	private void handleCursorOffsets(IDocument document)
+	{
+		String source = document.get();
+		ArrayList<Integer> cursorOffsets = new ArrayList<Integer>();
+		int offset = source.indexOf('|');
+
+		while (offset != -1)
+		{
+			// NOTE: we have to account for the deletion of previous offsets
+			cursorOffsets.add(offset - cursorOffsets.size());
+			offset = source.indexOf('|', offset + 1);
+		}
+
+		if (cursorOffsets.isEmpty())
+		{
+			// use last position if we didn't find any cursors
+			cursorOffsets.add(source.length());
+		}
+		else
+		{
+			// clean source
+			source = CURSOR.matcher(source).replaceAll(StringUtil.EMPTY);
+
+			// update document
+			document.set(source);
+		}
+		cursorOffsets.trimToSize();
+		this.cursorOffsets = cursorOffsets;
+	}
+
+	private static final Pattern CURSOR = Pattern.compile("\\|");
 }

@@ -7,38 +7,40 @@
  */
 package com.aptana.xml.core.tests;
 
+import org.junit.runners.Suite.SuiteClasses;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 import java.text.MessageFormat;
 
 import junit.framework.Test;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
 
-import com.aptana.core.logging.IdeLog;
-import com.aptana.xml.core.XMLCorePlugin;
 import com.aptana.xml.core.parsing.XMLParserPerformanceTest;
 import com.aptana.xml.core.parsing.XMLParserScannerPerformanceTest;
 
+@RunWith(Suite.class)
+@SuiteClasses({XMLParserScannerPerformanceTest.class, XMLParserPerformanceTest.class, })
 public class PerformanceTests
 {
 
-	public static Test suite()
-	{
-		TestSuite suite = new TestSuite(PerformanceTests.class.getName())
-		{
-			@Override
-			public void runTest(Test test, TestResult result)
-			{
-				String msg = MessageFormat.format("Running test: {0}", test.toString());
-				IdeLog.logError(XMLCorePlugin.getDefault(), msg);
-				System.out.println(msg);
-				super.runTest(test, result);
-			}
-		};
-		// $JUnit-BEGIN$
-		suite.addTestSuite(XMLParserScannerPerformanceTest.class);
-		suite.addTestSuite(XMLParserPerformanceTest.class);
-		// $JUnit-END$
-		return suite;
-	}
-
+//	public static Test suite()
+//	{
+//		TestSuite suite = new TestSuite(PerformanceTests.class.getName())
+//		{
+//			@Override
+//			public void runTest(Test test, TestResult result)
+//			{
+//				String msg = MessageFormat.format("Running test: {0}", test.toString());
+//				System.err.println(msg);
+//				super.runTest(test, result);
+//			}
+//		};
+//		// $JUnit-BEGIN$
+//		suite.addTestSuite(XMLParserScannerPerformanceTest.class);
+//		suite.addTestSuite(XMLParserPerformanceTest.class);
+//		// $JUnit-END$
+//		return suite;
+//	}
+//
 }

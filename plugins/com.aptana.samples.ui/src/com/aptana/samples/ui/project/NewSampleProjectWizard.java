@@ -8,7 +8,6 @@
 package com.aptana.samples.ui.project;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.text.MessageFormat;
@@ -17,9 +16,9 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
-import org.eclipse.core.resources.IProjectNatureDescriptor;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceStatus;
+import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
@@ -52,7 +51,6 @@ import com.aptana.core.logging.IdeLog;
 import com.aptana.core.util.ArrayUtil;
 import com.aptana.core.util.FileUtil;
 import com.aptana.core.util.ResourceUtil;
-import com.aptana.core.util.ZipUtil;
 import com.aptana.git.core.model.GitRepository;
 import com.aptana.git.ui.CloneJob;
 import com.aptana.git.ui.actions.DisconnectHandler;
@@ -82,8 +80,6 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 	private IProject newProject;
 	private IConfigurationElement configElement;
 
-	public String[] availableProjectNatures;
-
 	/**
 	 * A wizard to create a new sample project.
 	 * 
@@ -92,12 +88,6 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 	 */
 	public NewSampleProjectWizard(IProjectSample sample)
 	{
-		IProjectNatureDescriptor[] natureDescriptors = ResourcesPlugin.getWorkspace().getNatureDescriptors();
-		availableProjectNatures = new String[natureDescriptors.length];
-		for (int i = 0; i < natureDescriptors.length; i++)
-		{
-			availableProjectNatures[i] = natureDescriptors[i].getNatureId();
-		}
 		this.sample = sample;
 		initDialogSettings();
 	}
@@ -107,7 +97,7 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 	{
 		super.addPages();
 
-		mainPage = new SampleNewProjectCreationPage("basicNewProjectPage", availableProjectNatures); //$NON-NLS-1$
+		mainPage = new SampleNewProjectCreationPage("basicNewProjectPage", sample.getNatures()); //$NON-NLS-1$
 		mainPage.setTitle(Messages.NewSampleProjectWizard_ProjectPage_Title);
 		mainPage.setDescription(Messages.NewSampleProjectWizard_ProjectPage_Description);
 		addPage(mainPage);
@@ -121,7 +111,7 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 		// Add contributed pages
 		ProjectWizardContributionManager projectWizardContributionManager = ProjectsPlugin.getDefault()
 				.getProjectWizardContributionManager();
-		IWizardPage[] extraPages = projectWizardContributionManager.createPages(null, availableProjectNatures);
+		IWizardPage[] extraPages = projectWizardContributionManager.createPages(null, sample.getNatures());
 		if (!ArrayUtil.isEmpty(extraPages))
 		{
 			for (IWizardPage page : extraPages)
@@ -131,7 +121,7 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 		}
 
 		// Finalize pages using contributors
-		projectWizardContributionManager.finalizeWizardPages(getPages(), availableProjectNatures);
+		projectWizardContributionManager.finalizeWizardPages(getPages(), sample.getNatures());
 	}
 
 	@Override
@@ -210,18 +200,15 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 			}
 			else
 			{
-				doBasicCreateProject(newProjectHandle, description);
+				ProjectData projectData = mainPage.getProjectData();
 
-				// FIXME Move the logic for extracting/applying samples to IProjectSample! See IProjectTemplate!
-				ZipUtil.extract(new File(sample.getLocation()), newProjectHandle.getLocation(),
-						ZipUtil.Conflict.PROMPT, new NullProgressMonitor());
-
+				// Initialize the basic project data
+				projectData.project = newProjectHandle;
+				projectData.directory = mainPage.getLocationURI().getRawPath();
+				projectData.appURL = "http://"; // TODO: not used here. //$NON-NLS-1$
+				doBasicCreateProject(newProjectHandle, description, sample, projectData);
 				doPostProjectCreation(newProjectHandle);
 			}
-		}
-		catch (IOException e)
-		{
-			return null;
 		}
 		catch (CoreException e)
 		{
@@ -232,27 +219,47 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 		return newProject;
 	}
 
-	private void doBasicCreateProject(IProject project, final IProjectDescription description) throws CoreException
+	private void doBasicCreateProject(final IProject project, final IProjectDescription description,
+			final IProjectSample sample, final ProjectData projectData) throws CoreException
 	{
 		// create the new project operation
 		IRunnableWithProgress op = new IRunnableWithProgress()
 		{
 			public void run(IProgressMonitor monitor) throws InvocationTargetException
 			{
-				CreateProjectOperation op = new CreateProjectOperation(description,
-						Messages.NewSampleProjectWizard_CreateOp_Title);
 				try
 				{
+					CreateProjectOperation op = new CreateProjectOperation(description,
+							Messages.NewSampleProjectWizard_CreateOp_Title);
 					// see bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=219901
 					// directly execute the operation so that the undo state is
 					// not preserved. Making this undoable resulted in too many
 					// accidental file deletions.
 					op.execute(monitor, WorkspaceUndoUtil.getUIInfoAdapter(getShell()));
+					IWorkspaceRunnable runnable = new IWorkspaceRunnable()
+					{
+
+						public void run(IProgressMonitor monitor) throws CoreException
+						{
+							IStatus status = sample.createNewProject(project, projectData, monitor);
+							if (status != null && !status.isOK())
+							{
+								IdeLog.logError(SamplesUIPlugin.getDefault(), status.getMessage(),
+										status.getException());
+							}
+						}
+					};
+					ResourcesPlugin.getWorkspace().run(runnable, monitor);
+				}
+				catch (CoreException e)
+				{
+					throw new InvocationTargetException(e);
 				}
 				catch (ExecutionException e)
 				{
 					throw new InvocationTargetException(e);
 				}
+
 			}
 		};
 
@@ -337,21 +344,20 @@ public class NewSampleProjectWizard extends BasicNewResourceWizard implements IE
 					IdeLog.logError(SamplesUIPlugin.getDefault(), e);
 				}
 
-				doPostProjectCreation(newProject);
-
 				// Stop tracking the git repo
-				DisconnectHandler.disconnect(newProject, null);
+				DisconnectHandler.disconnect(projectHandle, null);
 				// Delete the .gitignore file and the .git folder
-				File toDelete = new File(newProject.getLocation().toFile(), GitRepository.GITIGNORE);
+				File toDelete = new File(projectHandle.getLocation().toFile(), GitRepository.GITIGNORE);
 				if (toDelete.exists())
 				{
 					toDelete.delete();
 				}
-				toDelete = new File(newProject.getLocation().toFile(), GitRepository.GIT_DIR);
+				toDelete = new File(projectHandle.getLocation().toFile(), GitRepository.GIT_DIR);
 				if (toDelete.exists())
 				{
 					FileUtil.deleteRecursively(toDelete);
 				}
+				doPostProjectCreation(projectHandle);
 			}
 		});
 		job.schedule();

@@ -1,12 +1,16 @@
 /**
- * Aptana Studio
- * Copyright (c) 2005-2011 by Appcelerator, Inc. All Rights Reserved.
- * Licensed under the terms of the GNU Public License (GPL) v3 (with exceptions).
- * Please see the license.html included with this distribution for details.
- * Any modifications to this file must keep this entire header intact.
- */
+ * Aptana Studio
+ * Copyright (c) 2005-2011 by Appcelerator, Inc. All Rights Reserved.
+ * Licensed under the terms of the GNU Public License (GPL) v3 (with exceptions).
+ * Please see the license.html included with this distribution for details.
+ * Any modifications to this file must keep this entire header intact.
+ */
 package com.aptana.editor.common.internal.commands;
 
+import org.junit.After;
+import org.junit.Test;
+import org.junit.Before;
+import static org.junit.Assert.*;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +27,6 @@ import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -35,7 +38,7 @@ import org.eclipse.ui.texteditor.ITextEditor;
 
 import com.aptana.editor.epl.tests.EditorTestHelper;
 
-public class NextPreviousEditorHandlerTest extends TestCase
+public class NextPreviousEditorHandlerTest
 {
 
 	private static final String HTML_EDITOR_ID = "com.aptana.editor.html";
@@ -47,10 +50,11 @@ public class NextPreviousEditorHandlerTest extends TestCase
 	private List<IFile> files;
 	private List<ITextEditor> editors;
 
-	@Override
-	protected void setUp() throws Exception
+//	@Override
+	@Before
+	public void setUp() throws Exception
 	{
-		super.setUp();
+//		super.setUp();
 		Class.forName("com.aptana.editor.html.HTMLPlugin");
 		project = createProject();
 		files = new ArrayList<IFile>();
@@ -58,8 +62,9 @@ public class NextPreviousEditorHandlerTest extends TestCase
 		// FIXME Make sure there are no other editors open!
 	}
 
-	@Override
-	protected void tearDown() throws Exception
+//	@Override
+	@After
+	public void tearDown() throws Exception
 	{
 		try
 		{
@@ -81,7 +86,7 @@ public class NextPreviousEditorHandlerTest extends TestCase
 			editors = null;
 			files = null;
 			project = null;
-			super.tearDown();
+//			super.tearDown();
 		}
 	}
 
@@ -118,6 +123,7 @@ public class NextPreviousEditorHandlerTest extends TestCase
 		return editor;
 	}
 
+	@Test
 	public void testExecute() throws Exception
 	{
 		// Open multiple files!!!

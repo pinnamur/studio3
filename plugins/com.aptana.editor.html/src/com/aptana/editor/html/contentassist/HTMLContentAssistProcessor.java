@@ -61,11 +61,11 @@ import com.aptana.editor.html.contentassist.model.ElementElement;
 import com.aptana.editor.html.contentassist.model.EntityElement;
 import com.aptana.editor.html.contentassist.model.EventElement;
 import com.aptana.editor.html.contentassist.model.ValueElement;
+import com.aptana.editor.html.core.preferences.IPreferenceConstants;
 import com.aptana.editor.html.parsing.HTMLParseState;
 import com.aptana.editor.html.parsing.HTMLUtils;
 import com.aptana.editor.html.parsing.lexer.HTMLLexemeProvider;
 import com.aptana.editor.html.parsing.lexer.HTMLTokenType;
-import com.aptana.editor.html.preferences.IPreferenceConstants;
 import com.aptana.editor.js.JSSourceConfiguration;
 import com.aptana.editor.js.contentassist.JSContentAssistProcessor;
 import com.aptana.editor.xml.TagUtil;
@@ -75,6 +75,7 @@ import com.aptana.parsing.lexer.Range;
 import com.aptana.preview.ProjectPreviewUtil;
 import com.aptana.ui.util.UIUtils;
 import com.aptana.webserver.core.IServer;
+import com.aptana.webserver.core.IServerManager;
 import com.aptana.webserver.core.WebServerCorePlugin;
 
 public class HTMLContentAssistProcessor extends CommonContentAssistProcessor
@@ -546,7 +547,7 @@ public class HTMLContentAssistProcessor extends CommonContentAssistProcessor
 					IServer serverConfiguration = ProjectPreviewUtil.getServerConfiguration(getProject());
 					if (serverConfiguration == null)
 					{
-						for (IServer server : WebServerCorePlugin.getDefault().getServerManager().getServers())
+						for (IServer server : getServerManager().getServers())
 						{
 							if (server.resolve(editorStore) != null)
 							{
@@ -667,6 +668,11 @@ public class HTMLContentAssistProcessor extends CommonContentAssistProcessor
 		}
 
 		return Collections.emptyList();
+	}
+
+	protected IServerManager getServerManager()
+	{
+		return WebServerCorePlugin.getDefault().getServerManager();
 	}
 
 	/**
