@@ -39,11 +39,11 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 	final static int RIGHT_BOTTOM = 3;
 
 	// drop shadow constants
-	final static int SIDE_DROP_WIDTH = 0;
+	final static int SIDE_DROP_WIDTH = 3;
 	final static int BOTTOM_DROP_WIDTH = 4;
 
 	// keylines
-	final static int OUTER_KEYLINE = 0;
+	final static int OUTER_KEYLINE = 1;
 	final static int INNER_KEYLINE = 0;
 	final static int TOP_KEYLINE = 0;
 
@@ -150,7 +150,7 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 				break;
 			case PART_BORDER:
 				x = x - INNER_KEYLINE - OUTER_KEYLINE - sideDropWidth - (cornerSize / 4);
-				width = 0; // width + 2 * (INNER_KEYLINE + OUTER_KEYLINE + sideDropWidth) + cornerSize / 2;
+				width = width + 2 * (INNER_KEYLINE + OUTER_KEYLINE + sideDropWidth) + cornerSize / 2;
 				height = height + borderTop + borderBottom;
 				y = y - borderTop;
 				if (onBottom)
@@ -404,7 +404,7 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 		int width = bounds.width;
 		int[] points = new int[1024];
 		int index = 0;
-		int radius = 0;
+		int radius = cornerSize / 2;
 		int circX = bounds.x + radius;
 		int circY = onBottom ? bounds.y + bounds.height + 1 - header - radius : bounds.y - 1 + radius;
 		int selectionX1, selectionY1, selectionX2 = bounds.width, selectionY2 = bounds.height;
@@ -430,51 +430,54 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 		}
 
 		int startX = -1, endX = -1;
-		// if (!onBottom) {
-		// int[] ltt = drawCircle(circX, circY, radius, LEFT_TOP);
-		// startX = ltt[6];
-		// for (int i = 0; i < ltt.length / 2; i += 2) {
-		// int tmp = ltt[i];
-		// ltt[i] = ltt[ltt.length - i - 2];
-		// ltt[ltt.length - i - 2] = tmp;
-		// tmp = ltt[i + 1];
-		// ltt[i + 1] = ltt[ltt.length - i - 1];
-		// ltt[ltt.length - i - 1] = tmp;
-		// }
-		// System.arraycopy(ltt, 0, points, index, ltt.length);
-		// index += ltt.length;
-		//
-		// int[] rt = drawCircle(circX + width - (radius * 2), circY, radius,
-		// RIGHT_TOP);
-		// endX = rt[rt.length - 4];
-		// for (int i = 0; i < rt.length / 2; i += 2) {
-		// int tmp = rt[i];
-		// rt[i] = rt[rt.length - i - 2];
-		// rt[rt.length - i - 2] = tmp;
-		// tmp = rt[i + 1];
-		// rt[i + 1] = rt[rt.length - i - 1];
-		// rt[rt.length - i - 1] = tmp;
-		// }
-		// System.arraycopy(rt, 0, points, index, rt.length);
-		// index += rt.length;
-		//
-		// points[index++] = selectionX2 = bounds.width + circX - radius;
-		// points[index++] = selectionY2 = bounds.y + bounds.height;
-		// } else {
-		// int[] ltt = drawCircle(circX, circY, radius, LEFT_BOTTOM);
-		// startX = ltt[6];
-		// System.arraycopy(ltt, 0, points, index, ltt.length);
-		// index += ltt.length;
-		//
-		// int[] rt = drawCircle(circX + width - (radius * 2), circY, radius,
-		// RIGHT_BOTTOM);
-		// endX = rt[rt.length - 4];
-		// System.arraycopy(rt, 0, points, index, rt.length);
-		// index += rt.length;
-		//
-		// points[index++] = selectionX2 = bounds.width + circX - radius;
-		// points[index++] = selectionY2 = bottomY;
-		// }
+		if (!onBottom)
+		{
+			int[] ltt = drawCircle(circX, circY, radius, LEFT_TOP);
+			startX = ltt[6];
+			for (int i = 0; i < ltt.length / 2; i += 2)
+			{
+				int tmp = ltt[i];
+				ltt[i] = ltt[ltt.length - i - 2];
+				ltt[ltt.length - i - 2] = tmp;
+				tmp = ltt[i + 1];
+				ltt[i + 1] = ltt[ltt.length - i - 1];
+				ltt[ltt.length - i - 1] = tmp;
+			}
+			System.arraycopy(ltt, 0, points, index, ltt.length);
+			index += ltt.length;
+
+			int[] rt = drawCircle(circX + width - (radius * 2), circY, radius, RIGHT_TOP);
+			endX = rt[rt.length - 4];
+			for (int i = 0; i < rt.length / 2; i += 2)
+			{
+				int tmp = rt[i];
+				rt[i] = rt[rt.length - i - 2];
+				rt[rt.length - i - 2] = tmp;
+				tmp = rt[i + 1];
+				rt[i + 1] = rt[rt.length - i - 1];
+				rt[rt.length - i - 1] = tmp;
+			}
+			System.arraycopy(rt, 0, points, index, rt.length);
+			index += rt.length;
+
+			points[index++] = selectionX2 = bounds.width + circX - radius;
+			points[index++] = selectionY2 = bounds.y + bounds.height;
+		}
+		else
+		{
+			int[] ltt = drawCircle(circX, circY, radius, LEFT_BOTTOM);
+			startX = ltt[6];
+			System.arraycopy(ltt, 0, points, index, ltt.length);
+			index += ltt.length;
+
+			int[] rt = drawCircle(circX + width - (radius * 2), circY, radius, RIGHT_BOTTOM);
+			endX = rt[rt.length - 4];
+			System.arraycopy(rt, 0, points, index, rt.length);
+			index += rt.length;
+
+			points[index++] = selectionX2 = bounds.width + circX - radius;
+			points[index++] = selectionY2 = bottomY;
+		}
 
 		if (active)
 		{
@@ -571,7 +574,7 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 			int[] points = new int[1024];
 			int[] inactive = new int[8];
 			int index = 0, inactive_index = 0;
-			int radius = 0;
+			int radius = cornerSize / 2;
 			int circX = bounds.x + radius;
 			int circY = onBottom ? bounds.y + bounds.height + 1 - header - radius : bounds.y - 1 + radius;
 			int bottomY = onBottom ? bounds.y - header : bounds.y + bounds.height;
