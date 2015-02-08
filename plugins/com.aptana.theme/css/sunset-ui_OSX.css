@@ -37,7 +37,7 @@
 	.MPartStack {
 	    background-color: #f6f6f6;
 	    color: #a2a2a2;
-	    swt-tab-renderer: url('bundleclass://org.eclipse.e4.ui.workbench.renderers.swt/org.eclipse.e4.ui.workbench.renderers.swt.CTabRendering');
+	    swt-tab-renderer: url('bundleclass://com.aptana.theme/com.aptana.theme.extensions.CTabRendering');
 	
 	    swt-tab-height: 35px;
 	    
@@ -132,6 +132,7 @@
 	    padding-bottom: 0px;
 	    padding-left: 0px;
 	    padding-right: 0px;
+	    swt-unselected-image-visible:false;
 	}
 	
 	.MToolControl.TrimStack {
@@ -468,7 +469,7 @@
 	
 	CTabFolder {
 	    background-color: #f6f6f6;
-	    color: #f7f8f8;
+	    color: #313538;
 	    swt-tab-renderer: url('bundleclass://org.eclipse.e4.ui.workbench.renderers.swt/org.eclipse.e4.ui.workbench.renderers.swt.CTabRendering');
 	
 		swt-tab-height: 32px;
@@ -479,10 +480,15 @@
 	    swt-unselected-tabs-color: #494A4D #404043 #272727 99% 100%; /* title background for unselected tab */
 	    swt-selected-tab-fill: #f6f6f6; /* title background for selected tab (gradient bottom color) */
 	
-	    swt-shadow-color: #0b0b0b;
+	    swt-shadow-color: #313538;
+	    swt-border-visible: false;
 	    swt-shadow-visible: false;
 	    swt-minimize-visible: true;
 	    swt-maximize-visible: false;
+	    	swt-unselected-image-visible:false;
+	    	swt-tab-outline: #FCA0A0;
+	    	swt-outer-keyline-color: #FCA0A0;
+	    	swt-inner-keyline-color: #FCA0A0;
 	    
 	    margin-top: 0px;
 	    margin-bottom: 0px;
@@ -625,7 +631,7 @@
 	/* } */
 	
 	.MPartSashContainer {
-	    background-color: #505658; /* Fill the gap between the view and editor. */
+	    background-color: #272822; /* Fill the gap between the view and editor. */
 	    jsash-width: 10px;
 	    color: #EEEEEE;
 	}
