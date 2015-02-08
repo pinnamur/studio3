@@ -259,7 +259,7 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 		boolean onBottom = parent.getTabPosition() == SWT.BOTTOM;
 		int[] points = new int[1024];
 		int index = 0;
-		int radius = cornerSize / 2;
+		int radius = 0;
 		int marginWidth = parent.marginWidth;
 		int marginHeight = parent.marginHeight;
 		int delta = INNER_KEYLINE + OUTER_KEYLINE + 2 * (shadowEnabled ? SIDE_DROP_WIDTH : 0) + 2 * marginWidth;
@@ -338,7 +338,7 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 				* marginHeight - (shadowEnabled ? BOTTOM_DROP_WIDTH : 0));
 
 		int circX = bounds.x + delta / 2 + radius;
-		int circY = bounds.y + radius;
+		int circY = bounds.y;
 
 		// Body
 		index = 0;
@@ -404,7 +404,7 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 		int width = bounds.width;
 		int[] points = new int[1024];
 		int index = 0;
-		int radius = cornerSize / 2;
+		int radius = 0;
 		int circX = bounds.x + radius;
 		int circY = onBottom ? bounds.y + bounds.height + 1 - header - radius : bounds.y - 1 + radius;
 		int selectionX1, selectionY1, selectionX2 = bounds.width, selectionY2 = bounds.height;
@@ -571,7 +571,7 @@ public class CTabRendering extends CTabFolderRenderer implements ICTabRendering
 			int[] points = new int[1024];
 			int[] inactive = new int[8];
 			int index = 0, inactive_index = 0;
-			int radius = cornerSize / 2;
+			int radius = 0;
 			int circX = bounds.x + radius;
 			int circY = onBottom ? bounds.y + bounds.height + 1 - header - radius : bounds.y - 1 + radius;
 			int bottomY = onBottom ? bounds.y - header : bounds.y + bounds.height;
